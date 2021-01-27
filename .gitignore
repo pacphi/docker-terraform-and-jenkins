@@ -1,0 +1,7 @@
+.history/
+.terraform/
+terraform.plan
+terraform.tfstate
+terraform.tfstate.backup
+*.hcl
+gcp-service-account.json

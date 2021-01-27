@@ -1,0 +1,10 @@
+gcp_project = "fe-cphillipson"
+gcp_service_account_credentials = "gcp-service-account.json"
+gcp_region = "us-west1"
+gke_name = "k8s"
+gke_nodes = 3
+gke_preemptible = false
+gke_node_type = "e2-standard-4"
+all_inbound = true
+artifactory_url = "https://krups.ironleg.me/artifactory"
+artifactory_repo_subpath = "tf4k8s/experiments/gcp/cluster"
