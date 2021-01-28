@@ -1,13 +1,19 @@
 pipeline {
     agent any
     environment {
-        MODULE_ROOT = "$WORKSPACE/terraform/clusters/gke"
+        JENKINS_CREDENTIALS_ID = "sa-gcloud"
+        CONTAINER_IMAGE = "gcr.io/google.com/cloudsdktool/cloud-sdk"
+        CREDENTIALS_BUCKET = "gs://sa-credentials-a094929"
+        VARS_BUCKET = "gs://terraform-vars-a094929"
+        MODULE_FOLDER = "clusters/gke"
+        MODULE_ROOT = "$WORKSPACE/terraform/$MODULE_FOLDER"
     }
     stages {
 
-        stage("clone sources") {
+        stage("clone source") {
             steps {
                 cleanWs()
+                // TODO consider replacing with [checkout scm] as described here: https://support.cloudbees.com/hc/en-us/articles/226122247-How-to-Customize-Checkout-for-Pipeline-Multibranch-
                 git branch: "main", url: "https://github.com/pacphi/docker-terraform-and-jenkins.git" 
             }
         }
@@ -20,17 +26,32 @@ pipeline {
 
         stage("fetch sensitive configuration") {
             steps {
-                withCredentials([file(credentialsId: 'sa-gcloud', variable: 'JSON_KEY')]) {
+                // sa-gcloud service account has only permissions to read from cloud storage buckets
+                withCredentials([file(credentialsId: "$JENKINS_CREDENTIALS_ID", variable: 'JSON_KEY')]) {
                     sh('cp -f ${JSON_KEY} $MODULE_ROOT/gcp-service-account.json')
-                    sh("docker run -i --rm gcr.io/google.com/cloudsdktool/cloud-sdk gcloud version")
-                    sh('docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gcloud auth activate-service-account --key-file=/workspace/gcp-service-account.json')
-                    sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gsutil cp gs://terraform-vars-a094929/clusters/gke/terraform.tfvars /workspace")
-                    sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gsutil cp gs://terraform-vars-a094929/clusters/gke/backend.tf /workspace")
-                    sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gsutil cp gs://sa-credentials-a094929/gcp-service-account.json /workspace")
+                    // emit details of container image we're employing
+                    sh("docker run -i --rm $CONTAINER_IMAGE gcloud version")
+                    // authentication and activation of the service account that will read (and download files) from cloud storage buckets
+                    sh('docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace $CONTAINER_IMAGE gcloud auth activate-service-account --key-file=/workspace/gcp-service-account.json')
+                    // user-supplied configuration that will drive terraform module
+                    // TODO we'll want to reimagine sourcing this as a collection of pipeline parameters with defaults
+                    // parameters are updated per job resulting in creation of new resources each 
+                    sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace $CONTAINER_IMAGE gsutil cp $VARS_BUCKET/$MODULE_FOLDER/terraform.tfvars /workspace")
+                    // sets up where we will manage terraform state, operator defined
+                    // TODO we'll want to feed the backend subpath as user-suppler configuration, so while most of the backend config is static the subpath will vary per job 
+                    sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace $CONTAINER_IMAGE gsutil cp $VARS_BUCKET/$MODULE_FOLDER/backend.tf /workspace")
+                    // this service account differs from sa-gcloud in that it will have elevated permissions to create resources as defined in terraform module; overwrites prior copy of service account file
+                    sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace $CONTAINER_IMAGE gsutil cp $CREDENTIALS_BUCKET/gcp-service-account.json /workspace")
                 }
             }
         }
 
+        stage("terraform init") {
+            steps {
+                sh("cd $MODULE_ROOT && ./terraform-init.sh")
+            }
+        }
+        
         stage("terraform destroy") {
             steps {
                 sh("cd $MODULE_ROOT && ./terraform-destroy.sh")
@@ -39,7 +60,8 @@ pipeline {
 
         stage("cleanup") {
             steps {
-                sh("rm -f $MODULE_ROOT/gcp-service-account.json $MODULE_ROOT/terraform.tfvars $MODULE_ROOT/*.sh")
+                // leave no trace of sensitive configuration
+                sh("rm -f $MODULE_ROOT/gcp-service-account.json $MODULE_ROOT/backend.tf $MODULE_ROOT/terraform.tfvars $MODULE_ROOT/*.sh")
             }
         }
     }
