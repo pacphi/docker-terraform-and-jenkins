@@ -70,7 +70,19 @@ Copy the sample [terraform.tfvars.sample](terraform/clusters/gke/terraform.tfvar
 Upload the file
 
 ```bash
-gsutil cp terraform.tfvars gs://terraform-vars-{suffix}
+gsutil cp terraform.tfvars gs://terraform-vars-{suffix}/clusters/gke/terraform.tfvars
+```
+> Replace `{suffix}` above with same string you defined when you created the bucket
+
+#### backend.tf
+
+Copy the sample [backend.tf.sample](terraform/clusters/gke/backend.tf.sample) to `backend.tf`. (Amend the value for each key in the new file as required and make sure that the end of this file contains a single newline).
+> It's unfortunate that we can't use variables, see this [issue](https://github.com/hashicorp/terraform/issues/13022).
+
+Upload the file
+
+```bash
+gsutil cp backend.tf gs://terraform-vars-{suffix}/clusters/gke/backend.tf
 ```
 > Replace `{suffix}` above with same string you defined when you created the bucket
 
@@ -79,6 +91,6 @@ gsutil cp terraform.tfvars gs://terraform-vars-{suffix}
 You'll need to upload a copy of the [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-gcloud) (in json format).  The file should be named `gcp-service-account.json`.
 
 ```bash
-gsutil cp gcp-service-account.json gs://sa-credentials-{suffix}
+gsutil cp gcp-service-account.json gs://sa-credentials-{suffix}/gcp-service-account.json
 ```
 > Replace `{suffix}` above with same string you defined when you created the bucket

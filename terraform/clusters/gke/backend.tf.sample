@@ -1,0 +1,9 @@
+terraform {
+  backend "artifactory" {
+    username = "admin"
+    password = "xxxxx"
+    url      = "https://krups.ironleg.me/artifactory"
+    repo     = "terraform-state"
+    subpath  = "clusters/gke"
+  }
+}

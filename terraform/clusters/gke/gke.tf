@@ -11,16 +11,6 @@ module "gke" {
   all_inbound = var.all_inbound
 }
 
-terraform {
-  backend "artifactory" {
-    username = var.artifactory_username
-    password = var.artifactory_password
-    url      = var.artifactory_server_url
-    repo     = "terraform-state"
-    subpath  = var.artifactory_repo_subpath
-  }
-}
-
 variable "gcp_project" {
   description = "A Google Cloud Platform project id"
 }
@@ -56,23 +46,6 @@ variable "gke_node_type" {
 variable "all_inbound" {
   description = "Allow inbound access from any IP address?"
   default = true
-}
-
-variable "artifactory_username" {
-  description = "Artifactory service account name"
-  default = "admin"
-}
-
-variable "artifactory_password" {
-  description = "Artifactory service account password"
-}
-
-variable "artifactory_server_url" {
-  description = "Artifactory server URL (e.g., https://krups.ironleg.me/artifactory)"
-}
-
-variable "artifactory_repo_subpath" {
-  description = "Path to terraform.tfstate within the repository"
 }
 
 output "kubeconfig_contents" {
