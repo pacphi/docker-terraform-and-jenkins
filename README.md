@@ -28,7 +28,7 @@ Fun with Docker, Terraform, Jenkins and Artifactory.
   * [Installation](https://computingforgeeks.com/configure-jfrog-artifactory-behind-nginx-reverse-proxy-letsencrypt/)
   * Configure a [local Generic repo](https://www.jfrog.com/confluence/display/JFROG/Repository+Management#RepositoryManagement-LocalRepositories) named `terraform-state`
 
-## Setup
+## Setup for GKE
 
 ### Jenkins
 
