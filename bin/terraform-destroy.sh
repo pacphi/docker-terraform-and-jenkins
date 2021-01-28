@@ -28,7 +28,7 @@ if [ -f "$TFVARS_FILE" ]; then
   rm -f $TFVARS_TMP
   
   # Destroy everything
-  docker run -it --rm --name terraform -v ${PWD}:/workspace -w /workspace ${DOCKER_CONTAINER_IMAGE} "${1}" destroy -auto-approve -state /workspace/terraform.tfstate /workspace/
+  docker run -i --rm --name terraform -v ${PWD}:/workspace -w /workspace ${DOCKER_CONTAINER_IMAGE} "${1}" destroy -auto-approve -state /workspace/terraform.tfstate /workspace/
 else 
   echo "[terraform destroy] could could not be executed because module did not include terraform.tfvars"
 fi

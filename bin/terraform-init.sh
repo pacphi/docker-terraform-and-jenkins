@@ -12,4 +12,4 @@ DOCKER_CONTAINER_IMAGE_VERSION="0.14.5"
 DOCKER_CONTAINER_IMAGE="${DOCKER_CONTAINER_IMAGE_PREFIX}:${DOCKER_CONTAINER_IMAGE_VERSION}"
 
 # Pull down plugins
-docker run -it --rm --name terraform -v ${PWD}:/workspace -w /workspace ${DOCKER_CONTAINER_IMAGE} "${1}" init /workspace/
+docker run -i --rm --name terraform -v ${PWD}:/workspace -w /workspace ${DOCKER_CONTAINER_IMAGE} "${1}" init /workspace/

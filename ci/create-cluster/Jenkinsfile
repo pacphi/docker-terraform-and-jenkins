@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+    environment {
+        MODULE_ROOT = "$WORKSPACE/terraform/clusters/gke"
+    }
+    stages {
+
+        stage("clone sources") {
+            steps {
+                git branch: "main", url: "https://github.com/pacphi/docker-terraform-and-jenkins.git"
+            }
+        }
+
+        stage("copy scripts into terraform module") {
+            steps {
+                sh("cp $WORKSPACE/bin/*.sh $MODULE_ROOT")
+            }
+        }
+
+        stage("fetch sensitive configuration") {
+            steps {
+                withCredentials([file(credentialsId: 'sa-gcloud', variable: 'JSON_KEY')]) {
+                    sh('cp ${JSON_KEY} $MODULE_ROOT/gcp-service-account.json')
+                    sh("docker run -i --rm gcr.io/google.com/cloudsdktool/cloud-sdk gcloud version")
+                    sh('docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gcloud auth activate-service-account --key-file=/workspace/gcp-service-account.json')
+                    sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gsutil cp gs://terraform-vars-a094929/clusters/gke/terraform.tfvars /workspace")
+                    sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gsutil cp gs://sa-credentials-a094929/gcp-service-account.json /workspace")
+                }
+            }
+        }
+
+        stage("terraform init") {
+            steps {
+                sh("cd $MODULE_ROOT && ./terraform-init.sh")
+            }
+        }
+
+        stage("terraform plan") {
+            steps {
+                sh("cd $MODULE_ROOT && ./terraform-plan.sh")
+            }
+        }
+
+        stage("terraform apply") {
+            steps {
+                sh("cd $MODULE_ROOT && ./terraform-apply.sh")
+            }
+        }
+
+        stage("cleanup") {
+            steps {
+                sh("rm -f $MODULE_ROOT/gcp-service-account.json $MODULE_ROOT/terraform.tfvars $MODULE_ROOT/*.sh")
+            }
+        }
+    }
+}

@@ -28,7 +28,7 @@ if [ -f "$TFVARS_FILE" ]; then
   rm -f $TFVARS_TMP
   
   # Apply the plan and capture state
-  docker run -it --rm --name terraform -v ${PWD}:/workspace -w /workspace ${DOCKER_CONTAINER_IMAGE} "${1}" apply -state /workspace/terraform.tfstate /workspace/terraform.plan
+  docker run -i --rm --name terraform -v ${PWD}:/workspace -w /workspace ${DOCKER_CONTAINER_IMAGE} "${1}" apply -state /workspace/terraform.tfstate /workspace/terraform.plan
 else 
   echo "[terraform apply] could could not be executed because module did not include terraform.tfvars"
 fi

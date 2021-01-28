@@ -28,7 +28,7 @@ if [ -f "$TFVARS_FILE" ]; then
   rm -f $TFVARS_TMP
   
   # Execute plan and store result in a *.out file
-  docker run -it --rm --name terraform $(echo "$TFVARS") -v ${PWD}:/workspace -w /workspace ${DOCKER_CONTAINER_IMAGE} "${1}" plan -out /workspace/terraform.plan /workspace/
+  docker run -i --rm --name terraform $(echo "$TFVARS") -v ${PWD}:/workspace -w /workspace ${DOCKER_CONTAINER_IMAGE} "${1}" plan -out /workspace/terraform.plan /workspace/
 else 
   echo "[terraform plan] could could not be executed because module did not include terraform.tfvars"
 fi
