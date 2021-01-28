@@ -1,7 +1,8 @@
 # docker-terraform-and-jenkins
 
-Fun with Docker, Terraform and Jenkins
+Fun with Docker, Terraform, Jenkins and Artifactory.
 
+![Screenshot of create-gke-cluster pipeline](create-gke-cluster.png)
 ## Prerequisites
 
 * Google Cloud
