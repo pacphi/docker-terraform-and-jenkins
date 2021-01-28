@@ -26,7 +26,7 @@ pipeline {
 
         stage("fetch sensitive configuration") {
             steps {
-                // sa-gcloud service account has only permissions to read from cloud storage buckets
+                // this service account has only permissions to read from cloud storage buckets
                 withCredentials([file(credentialsId: "$JENKINS_CREDENTIALS_ID", variable: 'JSON_KEY')]) {
                     sh('cp -f ${JSON_KEY} $MODULE_ROOT/gcp-service-account.json')
                     // emit details of container image we're employing
