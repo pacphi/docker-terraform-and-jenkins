@@ -7,7 +7,8 @@ pipeline {
 
         stage("clone sources") {
             steps {
-                git branch: "main", url: "https://github.com/pacphi/docker-terraform-and-jenkins.git"
+                cleanWs()
+                git branch: "main", url: "https://github.com/pacphi/docker-terraform-and-jenkins.git" 
             }
         }
 
