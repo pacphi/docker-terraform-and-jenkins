@@ -25,6 +25,7 @@ pipeline {
                     sh("docker run -i --rm gcr.io/google.com/cloudsdktool/cloud-sdk gcloud version")
                     sh('docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gcloud auth activate-service-account --key-file=/workspace/gcp-service-account.json')
                     sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gsutil cp gs://terraform-vars-a094929/clusters/gke/terraform.tfvars /workspace")
+                    sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gsutil cp gs://terraform-vars-a094929/clusters/gke/backend.tf /workspace")
                     sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace gcr.io/google.com/cloudsdktool/cloud-sdk gsutil cp gs://sa-credentials-a094929/gcp-service-account.json /workspace")
                 }
             }
