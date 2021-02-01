@@ -46,6 +46,7 @@ To create each bucket you could use the [cloud-sdk](https://cloud.google.com/sdk
 
 ```bash
 gsutil mb -l {location} gs://terraform-vars-{suffix}
+gsutil mb -l {location} gs://terraform-secrets-{suffix}
 gsutil mb -l {location} gs://sa-credentials-{suffix}
 ```
 > Replace `{location}` above with a [region](https://cloud.google.com/about/locations) (e.g., `us-west1`).  Also replace `{suffix}` with a unique string.
@@ -54,6 +55,7 @@ Then configure buckets for version control
 
 ```bash
 gsutil versioning set on gs://terraform-vars-{suffix}
+gsutil versioning set on gs://terraform-secrets-{suffix}
 gsutil versioning set on gs://sa-credentials-{suffix}
 ```
 > Replace `{suffix}` above with same string you defined when you created the bucket
