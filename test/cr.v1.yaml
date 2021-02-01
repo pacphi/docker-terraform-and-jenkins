@@ -3,3 +3,19 @@ cluster:
     worker:
       preemptible: true
       publicly_accessible: true
+  service_account:
+    bucket:
+      name: sa-credentials-a094929
+
+terraform:
+  backend:
+    type: "artifactory"
+    username: "admin"
+    password: "ajesnty7nKXzLrbR"
+    url: "https://krups.ironleg.me/artifactory"
+    repo: "terraform-state"
+  buckets:
+    vars:
+      name: terraform-vars-a094929
+    secrets:
+      name: terraform-secrets-a094929
