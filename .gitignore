@@ -1,5 +1,6 @@
 .history/
 .terraform/
+terraform.log
 terraform.plan
 terraform.tfstate
 terraform.tfstate.backup

@@ -14,7 +14,7 @@ pipeline {
             steps {
                 cleanWs()
                 // TODO consider replacing with [checkout scm] as described here: https://support.cloudbees.com/hc/en-us/articles/226122247-How-to-Customize-Checkout-for-Pipeline-Multibranch-
-                git branch: "main", url: "https://github.com/pacphi/docker-terraform-and-jenkins.git"
+                git branch: "main", url: "https://github.com/pacphi/docker-terraform-and-jenkins.git" 
             }
         }
 
@@ -40,7 +40,7 @@ pipeline {
                     // sets up where we will manage terraform state, operator defined
                     // TODO we'll want to feed the backend subpath as user-suppler configuration, so while most of the backend config is static the subpath will vary per job 
                     sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace $CONTAINER_IMAGE gsutil cp $VARS_BUCKET/$MODULE_FOLDER/backend.tf /workspace")
-                    // this service account differs from sa-gcloud in that it will have elevated permissions to create resources as defined in terraform module; overwrites prior copy of service account file
+                    // this service account differs from $JENKINS_CREDENTIALS_ID in that it will have elevated permissions to create resources as defined in terraform module; overwrites prior copy of service account file
                     sh("docker run -i --rm --name gcloud-config -v $MODULE_ROOT:/workspace $CONTAINER_IMAGE gsutil cp $CREDENTIALS_BUCKET/gcp-service-account.json /workspace")
                 }
             }
@@ -52,15 +52,9 @@ pipeline {
             }
         }
 
-        stage("terraform plan") {
+        stage("terraform destroy") {
             steps {
-                sh("cd $MODULE_ROOT && ./terraform-plan.sh")
-            }
-        }
-
-        stage("terraform apply") {
-            steps {
-                sh("cd $MODULE_ROOT && ./terraform-apply.sh")
+                sh("cd $MODULE_ROOT && ./terraform-destroy.sh")
             }
         }
 

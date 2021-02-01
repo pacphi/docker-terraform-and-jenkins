@@ -77,7 +77,7 @@ gsutil cp terraform.tfvars gs://terraform-vars-{suffix}/clusters/gke/terraform.t
 
 #### backend.tf
 
-Copy the sample [backend.tf.sample](terraform/clusters/gke/backend.tf.sample) to `backend.tf`. (Amend the value for each key in the new file as required and make sure that the end of this file contains a single newline).
+Copy the sample [backend.tf.sample](terraform/clusters/gke/backend.tf.sample) to `backend.tf`. (Amend the value for each key in the new file as required).
 > It's unfortunate that we can't use variables, see this [issue](https://github.com/hashicorp/terraform/issues/13022).
 
 Upload the file
