@@ -1,4 +1,5 @@
 pipeline {
+    // @see https://www.jenkins.io/doc/book/pipeline/syntax/#agent-parameters
     agent any
 
     environment {
