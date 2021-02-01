@@ -1,8 +1,0 @@
-gcp_project = "4910e9ec-214e-435e-b787-22885e3db345"
-gcp_service_account_credentials = "gcp-service-account.json"
-gcp_region = "us-west1"
-gke_name = "k8s"
-gke_nodes = 3
-gke_preemptible = false
-gke_node_type = "e2-standard-4"
-all_inbound = true

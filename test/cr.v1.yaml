@@ -1,0 +1,5 @@
+cluster:
+  nodes:
+    worker:
+      preemptible: true
+      publicly_accessible: true
