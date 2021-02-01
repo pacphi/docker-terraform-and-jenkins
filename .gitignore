@@ -1,9 +1,0 @@
-.history/
-.terraform/
-terraform.log
-terraform.plan
-terraform.tfstate
-terraform.tfstate.backup
-*.hcl
-backend.tf
-gcp-service-account.json

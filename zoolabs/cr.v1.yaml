@@ -1,0 +1,7 @@
+cluster:
+  name: "zoolabs"
+  region: "us-west1"
+  nodes:
+    worker:
+      count: 3
+      type: "e2-standard-4"
