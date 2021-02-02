@@ -1,4 +1,3 @@
-// this pipeline must be run with the "Use Groovy sandbox" checkbox unchecked
 pipeline {
     // @see https://www.jenkins.io/doc/book/pipeline/syntax/#agent-parameters
     agent any
