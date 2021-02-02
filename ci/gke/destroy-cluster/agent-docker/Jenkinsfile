@@ -4,12 +4,16 @@ pipeline {
 
     environment {
         CLOUDSDK_CONFIG = "${env.WORKSPACE}"
-        JENKINS_CREDENTIALS_ID = "sa-gcloud"
-        CREDENTIALS_BUCKET = "gs://sa-credentials-a094929"
-        SECRETS_BUCKET = "gs://terraform-secrets-a094929"
-        VARS_BUCKET = "gs://terraform-vars-a094929"
         MODULE_FOLDER = "clusters/gke"
         MODULE_ROOT = "terraform/$MODULE_FOLDER"
+    }
+
+    parameters {
+        string(name: 'USER_REQUEST_BUILD_TAG', description: 'Originating pipeline job id.  Appended to the MODULE_FOLDER environment variable.')
+        string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', description: 'Google Cloud Storage service account with [ Storage Object Admin ] permissions')
+        string(name: 'CREDENTIALS_BUCKET', description: 'Google Cloud Storage bucket that holds service account with [ Kubernetes Cluster Admin ] permissions')
+        string(name: 'SECRETS_BUCKET', description: 'Google Cloud Storage bucket that holds [ backend.tf ] among other sensitive configuration files')
+        string(name: 'VARS_BUCKET', description: 'Google Cloud Storage bucket that holds [ terraform.tfvars ]')
     }
 
     stages {
@@ -45,10 +49,10 @@ pipeline {
                         // user-supplied configuration that will drive terraform module
                         // this configuration would have been defined in an upstream parameterized pipeline (with defaults) whose duty it is to upload to the bucket
                         // parameters are per job resulting in idempotent creation of resources
-                        sh("gsutil cp $VARS_BUCKET/$MODULE_FOLDER/terraform.tfvars .")
+                        sh("gsutil cp $VARS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/terraform.tfvars .")
                         // sets up where we will manage terraform state
                         // the backend subpath is user supplied in upstream parameterized pipeline, and is married with operator defined constants, only the subpath will vary per job 
-                        sh("gsutil cp $VARS_BUCKET/$MODULE_FOLDER/backend.tf .")
+                        sh("gsutil cp $VARS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/backend.tf .")
                         // this service account differs from $JENKINS_CREDENTIALS_ID in that it will have elevated permissions to create resources as defined in terraform module; overwrites prior copy of service account file
                         sh("gsutil cp $CREDENTIALS_BUCKET/gcp-service-account.json .")
                     }
