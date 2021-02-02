@@ -16,7 +16,7 @@ pipeline {
     parameters {
         string(name: 'USER_MANIFEST_GIT_REPO_URL', description: 'A Git repository URL')
         string(name: 'USER_MANIFEST_GIT_REPO_BRANCH', description: 'A Git repository branch')
-        string(name: 'USER_MANIFEST_FOLDER', defaultValue: '--', description: 'The relative path from the root of the repository from which to source the manifest file')
+        string(name: 'USER_MANIFEST_FOLDER', defaultValue: '', description: 'The relative path from the root of the repository from which to source the manifest file')
         choice(name: 'USER_MANIFEST_FILENAME', choices: ['cr.v1.yaml'], description: 'The filename and version of the manifest')
         choice(name: 'TARGET_ENVIRONMENT', choices: ['test', 'staging'], description: 'Select a target environment')
     }
@@ -53,7 +53,7 @@ pipeline {
                          git branch: "${env.USER_MANIFEST_GIT_REPO_BRANCH}", url: "${env.USER_MANIFEST_GIT_REPO_URL}"
                     }
                     
-                    def user_manifest_folder = "${env.USER_MANIFEST_FOLDER}" == "--" ? "${env.WORKSPACE}/.user" : "${env.WORKSPACE}/.user/${env.USER_MANIFEST_FOLDER}"
+                    def user_manifest_folder = "${env.USER_MANIFEST_FOLDER}" == "" ? "${env.WORKSPACE}/.user" : "${env.WORKSPACE}/.user/${env.USER_MANIFEST_FOLDER}"
                     def operator_manifest_folder = "${env.WORKSPACE}/.operator/${env.TARGET_ENVIRONMENT}"
                     def user_manifest = readYaml file: "${user_manifest_folder}/${env.USER_MANIFEST_FILENAME}"
                     def operator_manifest = readYaml file: "${operator_manifest_folder}/${env.OPERATOR_MANIFEST_FILENAME}"
@@ -75,10 +75,10 @@ pipeline {
                         
                         def tfvars = "gcp_project = \"${clusterScopedCredentials.project_id}\""
                         tfvars <<= "gcp_service_account_credentials = \"gcp-service-account.json\""
-                        tfvars <<= "gcp_project = \"${clusterScopedCredentials.project_id}\""
                         tfvars <<= "gke_preemptible = ${operator_manifest.cluster.nodes.worker.preemptible}"
                         tfvars <<= "all_inbound = ${operator_manifest.cluster.nodes.worker.publicly_accessible}"
-                        tfvars <<= "gcp_name = \"${user_manifest.cluster.name}\""
+                        tfvars <<= "gke_name = \"${user_manifest.cluster.name}\""
+                        tfvars <<= "gcp_region = \"${user_manifest.cluster.region}\""
                         tfvars <<= "gke_nodes = ${user_manifest.cluster.nodes.worker.count}"
                         tfvars <<= "gke_node_type = \"${user_manifest.cluster.nodes.worker.type}\""
                         tfvars <<= "\n"
