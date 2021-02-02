@@ -38,7 +38,7 @@ pipeline {
             steps {
                 // this service account has only permissions to read from cloud storage buckets
                 // @see https://stackoverflow.com/questions/45355007/how-to-authenticate-with-a-google-service-account-in-jenkins-pipeline
-                withCredentials([file(credentialsId: "$JENKINS_CREDENTIALS_ID", variable: 'JSON_KEY')]) {
+                withCredentials([file(credentialsId: "$READWRITE_BUCKET_CREDENTIALS_ID", variable: 'JSON_KEY')]) {
                     dir("${env.MODULE_ROOT}") {
                         sh('cp -f ${JSON_KEY} gcp-service-account.json')
                         // emit details of container image we're employing
@@ -75,11 +75,12 @@ pipeline {
                     sh('terraform init')
                     sh('terraform plan -out terraform.plan')
                     sh('terraform apply -auto-approve terraform.plan')
+                    sh('terraform output kubeconfig_contents > config')
                 }
             }
             post {
                 success {
-                    withCredentials([file(credentialsId: "$JENKINS_CREDENTIALS_ID", variable: 'JSON_KEY')]) {
+                    withCredentials([file(credentialsId: "$READWRITE_BUCKET_CREDENTIALS_ID", variable: 'JSON_KEY')]) {
                         dir("${env.MODULE_ROOT}") {
                             // upload ./kube/config to secrets cloud storage bucket
                             sh("gsutil cp config $SECRETS_BUCKET/config")
