@@ -76,13 +76,22 @@ pipeline {
                     sh('terraform destroy -auto-approve')
                 }
             }
-            post {
-                success {
-                    withCredentials([file(credentialsId: "$READWRITE_BUCKET_CREDENTIALS_ID", variable: 'JSON_KEY')]) {
-                        dir("${env.MODULE_ROOT}") {
-                            // remove ./kube/config from secrets cloud storage bucket
-                            sh("gsutil rm $SECRETS_BUCKET/config")
-                        }
+        }
+        
+        stage("erase ~/.kube/config for cluster") {
+            agent {
+                // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
+                docker {
+                    image 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+                    args  '--rm -e HOME=/tmp'
+                    reuseNode true
+                }
+            }
+            steps {
+                withCredentials([file(credentialsId: "$READWRITE_BUCKET_CREDENTIALS_ID", variable: 'JSON_KEY')]) {
+                    dir("${env.MODULE_ROOT}") {
+                        // remove ./kube/config from secrets cloud storage bucket
+                        sh("gsutil rm -f $SECRETS_BUCKET/config")
                     }
                 }
             }
