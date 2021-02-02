@@ -105,10 +105,10 @@ pipeline {
                 }
                 // trigger downstream job
                 build job: "${env.DOWNSTREAM_JOB}", parameters: [
-                    string(name: 'USER_REQUEST_BUILD_TAG', value: "${env.BUILD_TAG}")
-                    string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', value: "${env.READWRITE_BUCKET_CREDENTIALS_ID}")
-                    string(name: 'CREDENTIALS_BUCKET', value: "gs://${operator_manifest.cluster.service_account.bucket.name}")
-                    string(name: 'SECRETS_BUCKET', value: "gs://${operator_manifest.terraform.buckets.secrets.name}")
+                    string(name: 'USER_REQUEST_BUILD_TAG', value: "${env.BUILD_TAG}"),
+                    string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', value: "${env.READWRITE_BUCKET_CREDENTIALS_ID}"),
+                    string(name: 'CREDENTIALS_BUCKET', value: "gs://${operator_manifest.cluster.service_account.bucket.name}"),
+                    string(name: 'SECRETS_BUCKET', value: "gs://${operator_manifest.terraform.buckets.secrets.name}"),
                     string(name: 'VARS_BUCKET', value: "gs://${operator_manifest.terraform.buckets.vars.name}")
                 ]
             }
