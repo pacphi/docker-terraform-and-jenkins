@@ -1,0 +1,123 @@
+pipeline {
+    // @see https://www.jenkins.io/doc/book/pipeline/syntax/#agent-parameters
+    agent {
+        label 'pez'
+    }
+
+    environment {
+        DEFAULT_AWS_REGION = 'us-west-2'
+        MODULE_FOLDER = "clusters/tkgi"
+        MODULE_ROOT = "terraform/$MODULE_FOLDER"
+    }
+
+    parameters {
+        string(name: 'USER_REQUEST_BUILD_TAG', description: 'Originating pipeline job id.  Appended to the MODULE_FOLDER environment variable.')
+        string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', description: 'Amazon S3 Storage service account with [ AmazonS3FullAccess ] permissions')
+        string(name: 'CREDENTIALS_BUCKET', description: 'Amazon S3 Storage bucket that holds service account with [ Kubernetes Cluster Admin ] permissions')
+        string(name: 'SECRETS_BUCKET', description: 'Amazon S3 Storage bucket that holds [ backend.tf ] among other sensitive configuration files')
+        string(name: 'VARS_BUCKET', description: 'Amazon S3 Storage bucket that holds [ terraform.tfvars ]')
+    }
+
+    stages {
+
+        stage("clone source") {
+            steps {
+                cleanWs()
+                // TODO consider replacing with [checkout scm] as described here: https://support.cloudbees.com/hc/en-us/articles/226122247-How-to-Customize-Checkout-for-Pipeline-Multibranch-
+                git branch: "main", url: "https://github.com/pacphi/docker-terraform-and-jenkins.git"
+            }
+        }
+
+        stage("fetch sensitive configuration") {
+            agent {
+                // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
+                docker {
+                    image 'amazon/aws-cli:latest'
+                    label 'pez'
+                    args  '-i --rm -e HOME=/tmp'
+                    reuseNode true
+                }
+            }
+            steps {
+                // this service account has only permissions to read from cloud storage buckets
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    dir("${env.MODULE_ROOT}") {
+                        sh('--version')
+                        sh('configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
+                        sh('configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
+                        sh("configure set default.region ${env.DEFAULT_AWS_REGION}")
+                        // @see https://cloud.google.com/storage/docs/gsutil/commands/cp
+                        // user-supplied configuration that will drive terraform module
+                        // this configuration would have been defined in an upstream parameterized pipeline (with defaults) whose duty it is to upload to the bucket
+                        // parameters are per job resulting in idempotent creation of resources
+                        sh("s3 cp $VARS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/terraform.tfvars .")
+                        // sets up where we will manage terraform state
+                        // the backend subpath is user supplied in upstream parameterized pipeline, and is married with operator defined constants, only the subpath will vary per job 
+                        sh("s3 cp $SECRETS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/backend.tf .")
+                    }
+                }
+            }
+        }
+
+        stage("invoke terraform") {
+            agent {
+                // @see https://stackoverflow.com/questions/55930244/jenkinsfile-to-run-terraform
+                // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
+                docker {
+                    image 'hashicorp/terraform:light'
+                    label 'pez'
+                    args  '--rm -e HOME=/tmp --entrypoint='
+                    reuseNode true
+                }
+            }
+            steps {
+                dir("${env.MODULE_ROOT}") {
+                    sh('terraform init')
+                    sh('terraform destroy -auto-approve')
+                }
+            }
+        }
+        
+        stage("erase ~/.kube/config for cluster") {
+            agent {
+                // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
+                docker {
+                    image 'amazon/aws-cli:latest'
+                    label 'pez'
+                    args  '-i --rm -e HOME=/tmp'
+                    reuseNode true
+                }
+            }
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    dir("${env.MODULE_ROOT}") {
+                        sh('--version')
+                        sh('configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
+                        sh('configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
+                        sh("configure set default.region ${env.DEFAULT_AWS_REGION}")
+                        // remove ./kube/config from secrets cloud storage bucket
+                        sh("gsutil rm -f $SECRETS_BUCKET/config")
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        // Always runs. And it runs before any of the other post conditions.
+        always {
+            // Wipe out the workspace before we finish!
+            deleteDir()
+        }
+    }
+    
+    // The options directive is for configuration that applies to the whole job.
+    options {
+        // Make sure we only keep 10 builds at a time, so we don't fill up our storage!
+        buildDiscarder(logRotator(numToKeepStr:'10'))
+        
+        // And we'd really like to be sure that this build doesn't hang forever, so
+        // let's time it out after 30 minutes.
+        timeout(time: 30, unit: 'MINUTES')
+    }
+}
