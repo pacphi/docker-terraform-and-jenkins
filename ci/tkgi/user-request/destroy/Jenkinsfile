@@ -25,7 +25,7 @@ pipeline {
                 docker {
                     image 'amazon/aws-cli:latest'
                     label 'pez'
-                    args  '-i --rm -e HOME=/tmp'
+                    args  '--rm -e HOME=/tmp --entrypoint='
                     reuseNode true
                 }
             }
@@ -36,11 +36,11 @@ pipeline {
 
                     dir('.operator') {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                            sh('--version')
-                            sh('configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
-                            sh('configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
-                            sh("configure set default.region ${env.DEFAULT_AWS_REGION}")
-                            sh("s3 cp s3://${env.OPERATOR_MANIFEST_S3_BUCKET}/${env.TARGET_ENVIRONMENT}/${env.OPERATOR_MANIFEST_FILENAME} .")
+                            sh('aws --version')
+                            sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
+                            sh('aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
+                            sh("aws configure set default.region ${env.DEFAULT_AWS_REGION}")
+                            sh("aws s3 cp s3://${env.OPERATOR_MANIFEST_S3_BUCKET}/${env.TARGET_ENVIRONMENT}/${env.OPERATOR_MANIFEST_FILENAME} .")
                         }
                     }
                     

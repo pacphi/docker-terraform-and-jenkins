@@ -33,7 +33,7 @@ pipeline {
                 docker {
                     image 'amazon/aws-cli:latest'
                     label 'pez'
-                    args  '-i --rm -e HOME=/tmp'
+                    args  '-i --rm -e HOME=/tmp --entrypoint='
                     reuseNode true
                 }
             }
@@ -41,18 +41,18 @@ pipeline {
                 // this service account has only permissions to read from cloud storage buckets
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     dir("${env.MODULE_ROOT}") {
-                        sh('--version')
-                        sh('configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
-                        sh('configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
-                        sh("configure set default.region ${env.DEFAULT_AWS_REGION}")
+                        sh('aws --version')
+                        sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
+                        sh('aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
+                        sh("aws configure set default.region ${env.DEFAULT_AWS_REGION}")
                         // @see https://cloud.google.com/storage/docs/gsutil/commands/cp
                         // user-supplied configuration that will drive terraform module
                         // this configuration would have been defined in an upstream parameterized pipeline (with defaults) whose duty it is to upload to the bucket
                         // parameters are per job resulting in idempotent creation of resources
-                        sh("s3 cp $VARS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/terraform.tfvars .")
+                        sh("aws s3 cp $VARS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/terraform.tfvars .")
                         // sets up where we will manage terraform state
                         // the backend subpath is user supplied in upstream parameterized pipeline, and is married with operator defined constants, only the subpath will vary per job 
-                        sh("s3 cp $SECRETS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/backend.tf .")
+                        sh("aws s3 cp $SECRETS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/backend.tf .")
                     }
                 }
             }
@@ -83,19 +83,19 @@ pipeline {
                 docker {
                     image 'amazon/aws-cli:latest'
                     label 'pez'
-                    args  '-i --rm -e HOME=/tmp'
+                    args  '-i --rm -e HOME=/tmp --entrypoint='
                     reuseNode true
                 }
             }
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     dir("${env.MODULE_ROOT}") {
-                        sh('--version')
-                        sh('configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
-                        sh('configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
-                        sh("configure set default.region ${env.DEFAULT_AWS_REGION}")
+                        sh('aws --version')
+                        sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
+                        sh('aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
+                        sh("aws configure set default.region ${env.DEFAULT_AWS_REGION}")
                         // remove ./kube/config from secrets cloud storage bucket
-                        sh("gsutil rm -f $SECRETS_BUCKET/config")
+                        sh("aws s3 rm -f $SECRETS_BUCKET/config")
                     }
                 }
             }
