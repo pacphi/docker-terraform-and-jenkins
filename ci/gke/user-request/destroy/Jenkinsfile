@@ -7,7 +7,7 @@ pipeline {
         READWRITE_BUCKET_CREDENTIALS_ID = "sa-gcloud"
         OPERATOR_MANIFEST_GIT_REPO_URL = 'https://github.com/pacphi/docker-terraform-and-jenkins.git'
         OPERATOR_MANIFEST_GIT_REPO_BRANCH = 'operator'
-        OPERATOR_MANIFEST_FILENAME = 'cr.v1.yaml'
+        OPERATOR_MANIFEST_FILENAME = 'gke-cr.v1.yaml'
     }
 
     parameters {

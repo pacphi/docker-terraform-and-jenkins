@@ -10,14 +10,14 @@ pipeline {
         TERRAFORM_MODULES_GIT_REPO_BRANCH = 'main'
         OPERATOR_MANIFEST_GIT_REPO_URL = 'https://github.com/pacphi/docker-terraform-and-jenkins.git'
         OPERATOR_MANIFEST_GIT_REPO_BRANCH = 'operator'
-        OPERATOR_MANIFEST_FILENAME = 'cr.v1.yaml'
+        OPERATOR_MANIFEST_FILENAME = 'gke-cr.v1.yaml'
     }
 
     parameters {
         string(name: 'USER_MANIFEST_GIT_REPO_URL', description: 'A Git repository URL')
         string(name: 'USER_MANIFEST_GIT_REPO_BRANCH', description: 'A Git repository branch')
         string(name: 'USER_MANIFEST_FOLDER', defaultValue: '', description: 'The relative path from the root of the repository from which to source the manifest file')
-        choice(name: 'USER_MANIFEST_FILENAME', choices: ['cr.v1.yaml'], description: 'The filename and version of the manifest')
+        choice(name: 'USER_MANIFEST_FILENAME', choices: ['gke-cr.v1.yaml'], description: 'The filename and version of the manifest')
         choice(name: 'TARGET_ENVIRONMENT', choices: ['test', 'staging'], description: 'Select a target environment')
     }
 
