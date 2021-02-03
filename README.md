@@ -32,9 +32,9 @@ Fun with Docker, Terraform, Jenkins and Artifactory.
 
 ### Jenkins
 
-Login to the Jenkins instance via your favorite browser
+Login to the Jenkins instance via your favorite browser.
 
-You'll need to create pipelines based upon [Jenkinsfile](https://www.jenkins.io/doc/book/pipeline/jenkinsfile/) you will find in the [ci](ci) directory.
+You'll need to create pipelines based upon [Jenkinsfile](https://www.jenkins.io/doc/book/pipeline/jenkinsfile/) you will find in the [ci/gke](ci/gke) directory.
 
 // TODO
 
@@ -95,5 +95,77 @@ You'll need to upload a copy of the [service account key](https://cloud.google.c
 
 ```bash
 gsutil cp gcp-service-account.json gs://sa-credentials-{suffix}/gcp-service-account.json
+```
+> Replace `{suffix}` above with same string you defined when you created the bucket
+
+
+## Setup for TKGI
+
+Login to the Jenkins instance via your favorite browser.
+
+You'll need to create pipelines based upon [Jenkinsfile](https://www.jenkins.io/doc/book/pipeline/jenkinsfile/) you will find in the [ci/tkgi](ci/tkgi) directory.
+
+// TODO
+
+### Sensitive configuration
+
+Upload your sensitive configuration to a pre-configured Amazon S3 storage buckets.
+
+To create each bucket you could use the [aws-cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-docker.html) Docker image or have directly [installed the CLI on your workstation](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html). (It's strongly recommended to append a unique suffix to each bucket name to avoid name collisions/conflicts).
+
+```bash
+aws s3 mb s3://terraform-vars-{suffix}
+aws s3 mb s3://terraform-secrets-{suffix}
+aws s3 mb s3://terraform-state-{suffix}
+aws s3 mb s3://sa-credentials-{suffix}
+```
+> Replace `{suffix}` with a unique string.
+
+Then configure buckets for version control
+
+```bash
+aws s3api put-bucket-versioning --bucket terraform-vars-{suffix} --versioning-configuration Status=Enabled
+aws s3api put-bucket-versioning --bucket terraform-secrets-{suffix} --versioning-configuration Status=Enabled
+aws s3api put-bucket-versioning --bucket terraform-state-{suffix} --versioning-configuration Status=Enabled
+aws s3api put-bucket-versioning --bucket sa-credentials-{suffix} --versioning-configuration Status=Enabled
+```
+> Replace `{suffix}` above with same string you defined when you created the bucket
+
+Now let's upload a couple files.  Place yourself into the module directory.
+
+```bash
+cd terraform/clusters/tkgi
+```
+
+#### terraform.tfvars
+
+Copy the sample [terraform.tfvars.sample](terraform/clusters/tkgi/terraform.tfvars.sample) to `terraform.tfvars`. (Amend the value for each key in the new file as required and make sure that the end of this file contains a single newline).
+
+Upload the file
+
+```bash
+aws s3 cp terraform.tfvars s3://terraform-vars-{suffix}/clusters/gke/terraform.tfvars
+```
+> Replace `{suffix}` above with same string you defined when you created the bucket
+
+#### backend.tf
+
+Copy the sample [backend.tf.sample](terraform/clusters/tkgi/backend.tf.sample) to `backend.tf`. (Amend the value for each key in the new file as required).
+> It's unfortunate that we can't use variables, see this [issue](https://github.com/hashicorp/terraform/issues/13022).
+
+Upload the file
+
+```bash
+aws s3 cp backend.tf s3://terraform-vars-{suffix}/clusters/gke/backend.tf
+```
+> Replace `{suffix}` above with same string you defined when you created the bucket
+
+#### .aws/credentials and .aws/config
+
+You'll need to upload copies of the [AWS credentials and config](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html).  These files typically reside underneath `~/.aws`.
+
+```bash
+aws s3 cp ~/.aws/config s3://sa-credentials-{suffix}/config
+aws s3 cp ~/.aws/credentials s3://sa-credentials-{suffix}/credentials
 ```
 > Replace `{suffix}` above with same string you defined when you created the bucket

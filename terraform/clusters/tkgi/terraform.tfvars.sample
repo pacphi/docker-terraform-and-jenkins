@@ -1,0 +1,9 @@
+tkg_api_url = "tkg-api.haas-448.pez.vmware.com"
+tkgi_skip_ssl_validation = true
+tkgi_user = "admin"
+tkgi_password = "why-would-i-share-this-with-you"
+tkgi_cluster_name = "foo"
+tkgi_plan = "small"
+tkgi_worker_count = 3
+tkgi_external_hostname = "foo.haas-448.pez.vmware.com"
+tkgi_tags = "status:non-billable,region:northwest"
