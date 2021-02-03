@@ -1,0 +1,134 @@
+// this pipeline must be run with the "Use Groovy sandbox" checkbox unchecked
+pipeline {
+    // @see https://www.jenkins.io/doc/book/pipeline/syntax/#agent-parameters
+    agent any
+
+    environment {
+        DOWNSTREAM_JOB = "create-gke-cluster"
+        READWRITE_BUCKET_CREDENTIALS_ID = "sa-gcloud"
+        TERRAFORM_MODULES_GIT_REPO_URL = 'https://github.com/pacphi/docker-terraform-and-jenkins.git'
+        TERRAFORM_MODULES_GIT_REPO_BRANCH = 'main'
+        OPERATOR_MANIFEST_GIT_REPO_URL = 'https://github.com/pacphi/docker-terraform-and-jenkins.git'
+        OPERATOR_MANIFEST_GIT_REPO_BRANCH = 'operator'
+        OPERATOR_MANIFEST_FILENAME = 'cr.v1.yaml'
+    }
+
+    parameters {
+        string(name: 'USER_MANIFEST_GIT_REPO_URL', description: 'A Git repository URL')
+        string(name: 'USER_MANIFEST_GIT_REPO_BRANCH', description: 'A Git repository branch')
+        string(name: 'USER_MANIFEST_FOLDER', defaultValue: '', description: 'The relative path from the root of the repository from which to source the manifest file')
+        choice(name: 'USER_MANIFEST_FILENAME', choices: ['cr.v1.yaml'], description: 'The filename and version of the manifest')
+        choice(name: 'TARGET_ENVIRONMENT', choices: ['test', 'staging'], description: 'Select a target environment')
+    }
+
+    stages {
+
+        stage("clone terraform modules repo") {
+            steps {
+                cleanWs()
+                git branch: "${env.TERRAFORM_MODULES_GIT_REPO_BRANCH}", url: "${env.TERRAFORM_MODULES_GIT_REPO_URL}"
+            }
+        }
+
+        stage("manufacture configuration and trigger downstream job") {
+            agent {
+                // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
+                docker {
+                    image 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+                    args  '--rm -e HOME=/tmp'
+                    reuseNode true
+                }
+            }
+            steps {
+                // @see https://www.jenkins.io/doc/pipeline/steps/pipeline-utility-steps/ < this plugin must be installed
+                script {
+                    sh('mkdir .operator')
+                    sh('mkdir .user')
+
+                    dir('.operator') {
+                         git branch: "${env.OPERATOR_MANIFEST_GIT_REPO_BRANCH}", url: "${env.OPERATOR_MANIFEST_GIT_REPO_URL}"
+                    }
+
+                    dir('.user') {
+                         git branch: "${env.USER_MANIFEST_GIT_REPO_BRANCH}", url: "${env.USER_MANIFEST_GIT_REPO_URL}"
+                    }
+                    
+                    def user_manifest_folder = "${env.USER_MANIFEST_FOLDER}" == "" ? "${env.WORKSPACE}/.user" : "${env.WORKSPACE}/.user/${env.USER_MANIFEST_FOLDER}"
+                    def operator_manifest_folder = "${env.WORKSPACE}/.operator/${env.TARGET_ENVIRONMENT}"
+                    def user_manifest = readYaml file: "${user_manifest_folder}/${env.USER_MANIFEST_FILENAME}"
+                    def operator_manifest = readYaml file: "${operator_manifest_folder}/${env.OPERATOR_MANIFEST_FILENAME}"
+
+                    // cluster module configuration
+                    dir("terraform/clusters/gke") {  
+                        // fetch service account credentials from cloud storage bucket
+                        withCredentials([file(credentialsId: "$READWRITE_BUCKET_CREDENTIALS_ID", variable: 'JSON_KEY')]) {
+                            sh('cp -f ${JSON_KEY} csb-sa.json')
+                            sh('gcloud version')
+                            // authentication and activation of the service account that will read (and download files) from cloud storage buckets
+                            sh('gcloud auth activate-service-account --key-file=csb-sa.json')
+                            // service account w/ permissions to create resources as defined in terraform module
+                            sh("gsutil cp gs://${operator_manifest.cluster.service_account.bucket.name}/gcp-service-account.json .")
+                        }
+                        def clusterScopedCredentials = readJSON file: "gcp-service-account.json"
+
+                        // user-supplied and operator-supplied key-values (i.e., terraform.tfvars) and backend configuration (i.e., backend.tf) for managing terraform.tfstate
+                        
+                        def tfvars = "gcp_project = \"${clusterScopedCredentials.project_id}\"\n"
+                        tfvars <<= "gcp_service_account_credentials = \"gcp-service-account.json\"\n"
+                        tfvars <<= "gke_preemptible = ${operator_manifest.cluster.nodes.worker.preemptible}\n"
+                        tfvars <<= "all_inbound = ${operator_manifest.cluster.nodes.worker.publicly_accessible}\n"
+                        tfvars <<= "gke_name = \"${user_manifest.cluster.name}\"\n"
+                        tfvars <<= "gcp_region = \"${user_manifest.cluster.region}\"\n"
+                        tfvars <<= "gke_nodes = ${user_manifest.cluster.nodes.worker.count}\n"
+                        tfvars <<= "gke_node_type = \"${user_manifest.cluster.nodes.worker.type}\"\n"
+                        tfvars <<= "\n"
+
+                        def backend = "terraform {\n"
+                        backend <<= "\tbackend \"${operator_manifest.terraform.backend.type}\" {\n"
+                        backend <<= "\t\tusername = \"${operator_manifest.terraform.backend.username}\"\n"
+                        backend <<= "\t\tpassword = \"${operator_manifest.terraform.backend.password}\"\n"
+                        backend <<= "\t\turl = \"${operator_manifest.terraform.backend.url}\"\n"
+                        backend <<= "\t\trepo = \"${operator_manifest.terraform.backend.repo}\"\n"
+                        backend <<= "\t\tsubpath = \"clusters/gke/${env.BUILD_TAG}\"\n"
+                        backend <<= "\t}\n"
+                        backend <<= "}"
+
+                        writeFile(file: 'terraform.tfvars', text: tfvars.toString())
+                        writeFile(file: 'backend.tf', text: backend.toString())
+
+                        // upload configuration to respective cloud storage buckets
+                        sh("gsutil cp terraform.tfvars gs://${operator_manifest.terraform.buckets.vars.name}/clusters/gke/${env.BUILD_TAG}/terraform.tfvars")
+                        sh("gsutil cp backend.tf gs://${operator_manifest.terraform.buckets.secrets.name}/clusters/gke/${env.BUILD_TAG}/backend.tf")
+
+                        // trigger downstream job
+                        build job: "${env.DOWNSTREAM_JOB}", parameters: [
+                            string(name: 'USER_REQUEST_BUILD_TAG', value: "${env.BUILD_TAG}"),
+                            string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', value: "${env.READWRITE_BUCKET_CREDENTIALS_ID}"),
+                            string(name: 'CREDENTIALS_BUCKET', value: "gs://${operator_manifest.cluster.service_account.bucket.name}"),
+                            string(name: 'SECRETS_BUCKET', value: "gs://${operator_manifest.terraform.buckets.secrets.name}"),
+                            string(name: 'VARS_BUCKET', value: "gs://${operator_manifest.terraform.buckets.vars.name}")
+                        ]
+                    }
+                }
+            }
+        } 
+    }
+
+    post {
+        // Always runs. And it runs before any of the other post conditions.
+        always {
+            // Wipe out the workspace before we finish!
+            deleteDir()
+        }
+    }
+        
+    // The options directive is for configuration that applies to the whole job.
+    options {
+        // Make sure we only keep 10 builds at a time, so we don't fill up our storage!
+        buildDiscarder(logRotator(numToKeepStr:'10'))
+            
+        // And we'd really like to be sure that this build doesn't hang forever, so
+        // let's time it out after 10 minutes.
+        timeout(time: 10, unit: 'MINUTES')
+    }
+}
