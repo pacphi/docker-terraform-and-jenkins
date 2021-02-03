@@ -4,6 +4,6 @@ terraform {
     password = "xxxxx"
     url      = "https://krups.ironleg.me/artifactory"
     repo     = "terraform-state"
-    subpath  = "clusters/gke"
+    subpath  = "clusters/gke/local"
   }
 }

@@ -2,6 +2,6 @@ terraform {
   backend "s3" {
     bucket = "terraform-state-076f328"
     region = "us-west-2"
-    key  = "clusters/gke"
+    key  = "clusters/gke/local"
   }
 }

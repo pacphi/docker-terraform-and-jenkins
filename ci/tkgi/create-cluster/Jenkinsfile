@@ -13,7 +13,6 @@ pipeline {
     parameters {
         string(name: 'USER_REQUEST_BUILD_TAG', description: 'Originating pipeline job id.  Appended to the MODULE_FOLDER environment variable.')
         string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', description: 'Amazon S3 Storage service account with [ AmazonS3FullAccess ] permissions')
-        string(name: 'CREDENTIALS_BUCKET', description: 'Amazon S3 Storage bucket that holds service account with [ Kubernetes Cluster Admin ] permissions')
         string(name: 'SECRETS_BUCKET', description: 'Amazon S3 Storage bucket that holds [ backend.tf ] among other sensitive configuration files')
         string(name: 'VARS_BUCKET', description: 'Amazon S3 Storage bucket that holds [ terraform.tfvars ]')
     }

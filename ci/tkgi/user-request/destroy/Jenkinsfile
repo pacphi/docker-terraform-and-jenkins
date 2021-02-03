@@ -51,7 +51,6 @@ pipeline {
                     build job: "${env.DOWNSTREAM_JOB}", parameters: [
                         string(name: 'USER_REQUEST_BUILD_TAG', value: "${env.USER_REQUEST_BUILD_TAG}"),
                         string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', value: "${env.READWRITE_BUCKET_CREDENTIALS_ID}"),
-                        string(name: 'CREDENTIALS_BUCKET', value: "s3://${operator_manifest.cluster.service_account.bucket.name}"),
                         string(name: 'SECRETS_BUCKET', value: "s3://${operator_manifest.terraform.buckets.secrets.name}"),
                         string(name: 'VARS_BUCKET', value: "s3://${operator_manifest.terraform.buckets.vars.name}")
                     ]
