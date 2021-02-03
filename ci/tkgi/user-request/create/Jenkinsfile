@@ -1,4 +1,3 @@
-// this pipeline must be run with the "Use Groovy sandbox" checkbox unchecked
 pipeline {
     // @see https://www.jenkins.io/doc/book/pipeline/syntax/#agent-parameters
     agent {
@@ -70,29 +69,30 @@ pipeline {
                     // cluster module configuration
                     dir("terraform/clusters/tkgi") {  
                         // user-supplied and operator-supplied key-values (i.e., terraform.tfvars) and backend configuration (i.e., backend.tf) for managing terraform.tfstate
-                        def requestId = UUID.randomUUID().toString()
+                        sh('uuidgen > uuid.txt')
+                        def requestId = readFile 'uuid.txt'
 
                         def tfvars = "tkgi_api_url = \"${operator_manifest.cluster.api.url}\"\n"
-                        tfvars <<= "tkgi_skip_ssl_validation = ${operator_manifest.cluster.api.skip_ssl_validation}\n"
-                        tfvars <<= "tkgi_user = ${operator_manifest.cluster.api.username}\n"
-                        tfvars <<= "tkgi_password = \"${operator_manifest.cluster.api.password}\"\n"
-                        tfvars <<= "tkgi_cluster_name = \"${user_manifest.cluster.name}\"\n"
-                        tfvars <<= "tkgi_plan = ${user_manifest.cluster.plan}\n"
-                        tfvars <<= "tkgi_worker_count = \"${user_manifest.cluster.nodes.worker.count}\"\n"
-                        tfvars <<= "tkgi_external_hostname = \"${user_manifest.cluster.hostname}\"\n"
-                        tfvars <<= "tkgi_tags = \"${user_manifest.cluster.tags}\"\n"
-                        tfvars <<= "\n"
+                        tfvars += "tkgi_skip_ssl_validation = ${operator_manifest.cluster.api.skip_ssl_validation}\n"
+                        tfvars += "tkgi_user = ${operator_manifest.cluster.api.username}\n"
+                        tfvars += "tkgi_password = \"${operator_manifest.cluster.api.password}\"\n"
+                        tfvars += "tkgi_cluster_name = \"${user_manifest.cluster.name}\"\n"
+                        tfvars += "tkgi_plan = ${user_manifest.cluster.plan}\n"
+                        tfvars += "tkgi_worker_count = \"${user_manifest.cluster.nodes.worker.count}\"\n"
+                        tfvars += "tkgi_external_hostname = \"${user_manifest.cluster.hostname}\"\n"
+                        tfvars += "tkgi_tags = \"${user_manifest.cluster.tags}\"\n"
+                        tfvars += "\n"
 
                         def backend = "terraform {\n"
-                        backend <<= "\tbackend \"${operator_manifest.terraform.backend.type}\" {\n"
-                        backend <<= "\t\tbucket = \"${operator_manifest.terraform.backend.bucket}\"\n"
-                        backend <<= "\t\tregion = \"${operator_manifest.terraform.backend.region}\"\n"
-                        backend <<= "\t\tkey = \"clusters/tkgi/${requestId}\"\n"
-                        backend <<= "\t}\n"
-                        backend <<= "}"
+                        backend += "\tbackend \"${operator_manifest.terraform.backend.type}\" {\n"
+                        backend += "\t\tbucket = \"${operator_manifest.terraform.backend.bucket}\"\n"
+                        backend += "\t\tregion = \"${operator_manifest.terraform.backend.region}\"\n"
+                        backend += "\t\tkey = \"clusters/tkgi/${requestId}\"\n"
+                        backend += "\t}\n"
+                        backend += "}"
 
-                        writeFile(file: 'terraform.tfvars', text: tfvars.toString())
-                        writeFile(file: 'backend.tf', text: backend.toString())
+                        writeFile(file: 'terraform.tfvars', text: tfvars)
+                        writeFile(file: 'backend.tf', text: backend)
 
                         // upload configuration to respective cloud storage buckets
                         sh("aws s3 cp terraform.tfvars s3://${operator_manifest.terraform.buckets.vars.name}/clusters/tkgi/${requestId}/terraform.tfvars")

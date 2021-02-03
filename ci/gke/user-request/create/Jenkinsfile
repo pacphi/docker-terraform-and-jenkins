@@ -1,4 +1,3 @@
-// this pipeline must be run with the "Use Groovy sandbox" checkbox unchecked
 pipeline {
     // @see https://www.jenkins.io/doc/book/pipeline/syntax/#agent-parameters
     agent any
@@ -72,37 +71,39 @@ pipeline {
                         def clusterScopedCredentials = readJSON file: "gcp-service-account.json"
 
                         // user-supplied and operator-supplied key-values (i.e., terraform.tfvars) and backend configuration (i.e., backend.tf) for managing terraform.tfstate
-                        
+                        sh('uuidgen > uuid.txt')
+                        def requestId = readFile 'uuid.txt'
+
                         def tfvars = "gcp_project = \"${clusterScopedCredentials.project_id}\"\n"
-                        tfvars <<= "gcp_service_account_credentials = \"gcp-service-account.json\"\n"
-                        tfvars <<= "gke_preemptible = ${operator_manifest.cluster.nodes.worker.preemptible}\n"
-                        tfvars <<= "all_inbound = ${operator_manifest.cluster.nodes.worker.publicly_accessible}\n"
-                        tfvars <<= "gke_name = \"${user_manifest.cluster.name}\"\n"
-                        tfvars <<= "gcp_region = \"${user_manifest.cluster.region}\"\n"
-                        tfvars <<= "gke_nodes = ${user_manifest.cluster.nodes.worker.count}\n"
-                        tfvars <<= "gke_node_type = \"${user_manifest.cluster.nodes.worker.type}\"\n"
-                        tfvars <<= "\n"
+                        tfvars += "gcp_service_account_credentials = \"gcp-service-account.json\"\n"
+                        tfvars += "gke_preemptible = ${operator_manifest.cluster.nodes.worker.preemptible}\n"
+                        tfvars += "all_inbound = ${operator_manifest.cluster.nodes.worker.publicly_accessible}\n"
+                        tfvars += "gke_name = \"${user_manifest.cluster.name}\"\n"
+                        tfvars += "gcp_region = \"${user_manifest.cluster.region}\"\n"
+                        tfvars += "gke_nodes = ${user_manifest.cluster.nodes.worker.count}\n"
+                        tfvars += "gke_node_type = \"${user_manifest.cluster.nodes.worker.type}\"\n"
+                        tfvars += "\n"
 
                         def backend = "terraform {\n"
-                        backend <<= "\tbackend \"${operator_manifest.terraform.backend.type}\" {\n"
-                        backend <<= "\t\tusername = \"${operator_manifest.terraform.backend.username}\"\n"
-                        backend <<= "\t\tpassword = \"${operator_manifest.terraform.backend.password}\"\n"
-                        backend <<= "\t\turl = \"${operator_manifest.terraform.backend.url}\"\n"
-                        backend <<= "\t\trepo = \"${operator_manifest.terraform.backend.repo}\"\n"
-                        backend <<= "\t\tsubpath = \"clusters/gke/${env.BUILD_TAG}\"\n"
-                        backend <<= "\t}\n"
-                        backend <<= "}"
+                        backend += "\tbackend \"${operator_manifest.terraform.backend.type}\" {\n"
+                        backend += "\t\tusername = \"${operator_manifest.terraform.backend.username}\"\n"
+                        backend += "\t\tpassword = \"${operator_manifest.terraform.backend.password}\"\n"
+                        backend += "\t\turl = \"${operator_manifest.terraform.backend.url}\"\n"
+                        backend += "\t\trepo = \"${operator_manifest.terraform.backend.repo}\"\n"
+                        backend += "\t\tsubpath = \"clusters/gke/${requestId}\"\n"
+                        backend += "\t}\n"
+                        backend += "}"
 
-                        writeFile(file: 'terraform.tfvars', text: tfvars.toString())
-                        writeFile(file: 'backend.tf', text: backend.toString())
+                        writeFile(file: 'terraform.tfvars', text: tfvars)
+                        writeFile(file: 'backend.tf', text: backend)
 
                         // upload configuration to respective cloud storage buckets
-                        sh("gsutil cp terraform.tfvars gs://${operator_manifest.terraform.buckets.vars.name}/clusters/gke/${env.BUILD_TAG}/terraform.tfvars")
-                        sh("gsutil cp backend.tf gs://${operator_manifest.terraform.buckets.secrets.name}/clusters/gke/${env.BUILD_TAG}/backend.tf")
+                        sh("gsutil cp terraform.tfvars gs://${operator_manifest.terraform.buckets.vars.name}/clusters/gke/${requestId}/terraform.tfvars")
+                        sh("gsutil cp backend.tf gs://${operator_manifest.terraform.buckets.secrets.name}/clusters/gke/${requestId}/backend.tf")
 
                         // trigger downstream job
                         build job: "${env.DOWNSTREAM_JOB}", parameters: [
-                            string(name: 'USER_REQUEST_BUILD_TAG', value: "${env.BUILD_TAG}"),
+                            string(name: 'USER_REQUEST_BUILD_TAG', value: "${requestId}"),
                             string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', value: "${env.READWRITE_BUCKET_CREDENTIALS_ID}"),
                             string(name: 'CREDENTIALS_BUCKET', value: "gs://${operator_manifest.cluster.service_account.bucket.name}"),
                             string(name: 'SECRETS_BUCKET', value: "gs://${operator_manifest.terraform.buckets.secrets.name}"),
