@@ -63,7 +63,7 @@ pipeline {
                 // @see https://stackoverflow.com/questions/55930244/jenkinsfile-to-run-terraform
                 // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
                 docker {
-                    image 'hashicorp/terraform:light'
+                    image 'pacphi/terraforming-tkgi:latest'
                     label 'pez'
                     args  '--rm -e HOME=/tmp --entrypoint='
                     reuseNode true
