@@ -70,11 +70,17 @@ pipeline {
                 }
             }
             steps {
-                dir("${env.MODULE_ROOT}") {
-                    sh('terraform init')
-                    sh('terraform plan -out terraform.plan')
-                    sh('terraform apply -auto-approve terraform.plan')
-                    sh('terraform output kubeconfig_contents > config')
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${env.READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    dir("${env.MODULE_ROOT}") {
+                        sh('aws --version')
+                        sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
+                        sh('aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
+                        sh("aws configure set default.region ${env.DEFAULT_AWS_REGION}")
+                        sh('terraform init')
+                        sh('terraform plan -out terraform.plan')
+                        sh('terraform apply -auto-approve terraform.plan')
+                        sh('terraform output kubeconfig_contents > config')
+                    }
                 }
             }
         }
