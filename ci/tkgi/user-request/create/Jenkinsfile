@@ -67,7 +67,7 @@ pipeline {
                     sh('mkdir .user')
 
                     dir('.operator') {
-                        def requestToken = readFile file: 'uuid.txt'
+                        
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                             sh('aws --version')
                             sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
@@ -81,6 +81,7 @@ pipeline {
                          git branch: "${env.USER_MANIFEST_GIT_REPO_BRANCH}", url: "${env.USER_MANIFEST_GIT_REPO_URL}"
                     }
                     
+                    def requestToken = readFile(file: '.operator/uuid.txt')
                     def user_manifest_folder = "${env.USER_MANIFEST_FOLDER}" == "" ? "${env.WORKSPACE}/.user" : "${env.WORKSPACE}/.user/${env.USER_MANIFEST_FOLDER}"
                     def operator_manifest_folder = "${env.WORKSPACE}/.operator"
                     def user_manifest = readYaml file: "${user_manifest_folder}/${env.USER_MANIFEST_FILENAME}"

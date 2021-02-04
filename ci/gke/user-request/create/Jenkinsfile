@@ -64,7 +64,6 @@ pipeline {
                     sh('mkdir .user')
 
                     dir('.operator') {
-                        def requestToken = readFile file: 'uuid.txt'
                         git branch: "${env.OPERATOR_MANIFEST_GIT_REPO_BRANCH}", url: "${env.OPERATOR_MANIFEST_GIT_REPO_URL}"
                     }
 
@@ -72,6 +71,7 @@ pipeline {
                         git branch: "${env.USER_MANIFEST_GIT_REPO_BRANCH}", url: "${env.USER_MANIFEST_GIT_REPO_URL}"
                     }
                     
+                    def requestToken = readFile(file: '.operator/uuid.txt')
                     def user_manifest_folder = "${env.USER_MANIFEST_FOLDER}" == "" ? "${env.WORKSPACE}/.user" : "${env.WORKSPACE}/.user/${env.USER_MANIFEST_FOLDER}"
                     def operator_manifest_folder = "${env.WORKSPACE}/.operator/${env.TARGET_ENVIRONMENT}"
                     def user_manifest = readYaml file: "${user_manifest_folder}/${env.USER_MANIFEST_FILENAME}"
