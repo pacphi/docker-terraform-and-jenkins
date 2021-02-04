@@ -82,30 +82,6 @@ pipeline {
                 }
             }
         }
-        
-        stage("erase ~/.kube/config for cluster") {
-            agent {
-                // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
-                docker {
-                    image 'amazon/aws-cli:latest'
-                    label 'pez'
-                    args  '-i --rm -e HOME=/tmp --entrypoint='
-                    reuseNode true
-                }
-            }
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${env.READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    dir("${env.MODULE_ROOT}") {
-                        sh('aws --version')
-                        sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
-                        sh('aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
-                        sh("aws configure set default.region ${env.DEFAULT_AWS_REGION}")
-                        // remove ./kube/config from secrets cloud storage bucket
-                        sh("aws s3 rm -f $SECRETS_BUCKET/config")
-                    }
-                }
-            }
-        }
     }
     
     post {
