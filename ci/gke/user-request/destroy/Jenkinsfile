@@ -11,7 +11,7 @@ pipeline {
     }
 
     parameters {
-        string(name: 'USER_REQUEST_BUILD_TAG', description: 'Originating create-user-request pipeline job id')
+        string(name: 'REQUEST_TOKEN', description: 'Originating create-user-request pipeline job id')
         choice(name: 'TARGET_ENVIRONMENT', choices: ['test', 'staging'], description: 'Select a target environment')
     }
 
@@ -40,7 +40,7 @@ pipeline {
 
                     // trigger downstream job
                     build job: "${env.DOWNSTREAM_JOB}", parameters: [
-                        string(name: 'USER_REQUEST_BUILD_TAG', value: "${env.USER_REQUEST_BUILD_TAG}"),
+                        string(name: 'REQUEST_TOKEN', value: "${env.REQUEST_TOKEN}"),
                         string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', value: "${env.READWRITE_BUCKET_CREDENTIALS_ID}"),
                         string(name: 'CREDENTIALS_BUCKET', value: "gs://${operator_manifest.cluster.service_account.bucket.name}"),
                         string(name: 'SECRETS_BUCKET', value: "gs://${operator_manifest.terraform.buckets.secrets.name}"),

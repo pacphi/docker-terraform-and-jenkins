@@ -11,7 +11,7 @@ pipeline {
     }
 
     parameters {
-        string(name: 'USER_REQUEST_BUILD_TAG', description: 'Originating pipeline job id.  Appended to the MODULE_FOLDER environment variable.')
+        string(name: 'REQUEST_TOKEN', description: 'Originating pipeline job id.  Appended to the MODULE_FOLDER environment variable.')
         string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', description: 'Amazon S3 Storage service account with [ AmazonS3FullAccess ] permissions')
         string(name: 'SECRETS_BUCKET', description: 'Amazon S3 Storage bucket that holds [ backend.tf ] among other sensitive configuration files')
         string(name: 'VARS_BUCKET', description: 'Amazon S3 Storage bucket that holds [ terraform.tfvars ]')
@@ -49,10 +49,10 @@ pipeline {
                         // user-supplied configuration that will drive terraform module
                         // this configuration would have been defined in an upstream parameterized pipeline (with defaults) whose duty it is to upload to the bucket
                         // parameters are per job resulting in idempotent creation of resources
-                        sh("aws s3 cp $VARS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/terraform.tfvars .")
+                        sh("aws s3 cp $VARS_BUCKET/$MODULE_FOLDER/$REQUEST_TOKEN/terraform.tfvars .")
                         // sets up where we will manage terraform state
                         // the backend subpath is user supplied in upstream parameterized pipeline, and is married with operator defined constants, only the subpath will vary per job 
-                        sh("aws s3 cp $SECRETS_BUCKET/$MODULE_FOLDER/$USER_REQUEST_BUILD_TAG/backend.tf .")
+                        sh("aws s3 cp $SECRETS_BUCKET/$MODULE_FOLDER/$REQUEST_TOKEN/backend.tf .")
                     }
                 }
             }

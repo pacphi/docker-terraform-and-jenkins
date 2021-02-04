@@ -31,6 +31,26 @@ pipeline {
             }
         }
 
+        stage("create request token") {
+            agent {
+                // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
+                docker {
+                    image 'pacphi/uuidgen:latest'
+                    label 'pez'
+                    args  '--rm -e HOME=/tmp --entrypoint='
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    sh('mkdir .operator')
+                    dir('.operator') {
+                        sh('uuidgen > uuid.txt')
+                    }
+                }
+            }
+        }
+
         stage("manufacture configuration and trigger downstream job") {
             agent {
                 // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
@@ -44,10 +64,10 @@ pipeline {
             steps {
                 // @see https://www.jenkins.io/doc/pipeline/steps/pipeline-utility-steps/ < this plugin must be installed
                 script {
-                    sh('mkdir .operator')
                     sh('mkdir .user')
 
                     dir('.operator') {
+                        def requestToken = readFile file: 'uuid.txt'
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                             sh('aws --version')
                             sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
@@ -69,8 +89,6 @@ pipeline {
                     // cluster module configuration
                     dir("terraform/clusters/tkgi") {  
                         // user-supplied and operator-supplied key-values (i.e., terraform.tfvars) and backend configuration (i.e., backend.tf) for managing terraform.tfstate
-                        sh('uuidgen > uuid.txt')
-                        def requestId = readFile 'uuid.txt'
 
                         def tfvars = "tkgi_api_url = \"${operator_manifest.cluster.api.url}\"\n"
                         tfvars += "tkgi_skip_ssl_validation = ${operator_manifest.cluster.api.skip_ssl_validation}\n"
@@ -87,7 +105,7 @@ pipeline {
                         backend += "\tbackend \"${operator_manifest.terraform.backend.type}\" {\n"
                         backend += "\t\tbucket = \"${operator_manifest.terraform.backend.bucket}\"\n"
                         backend += "\t\tregion = \"${operator_manifest.terraform.backend.region}\"\n"
-                        backend += "\t\tkey = \"clusters/tkgi/${requestId}\"\n"
+                        backend += "\t\tkey = \"clusters/tkgi/${requestToken}\"\n"
                         backend += "\t}\n"
                         backend += "}"
 
@@ -95,12 +113,12 @@ pipeline {
                         writeFile(file: 'backend.tf', text: backend)
 
                         // upload configuration to respective cloud storage buckets
-                        sh("aws s3 cp terraform.tfvars s3://${operator_manifest.terraform.buckets.vars.name}/clusters/tkgi/${requestId}/terraform.tfvars")
-                        sh("aws s3 cp backend.tf s3://${operator_manifest.terraform.buckets.secrets.name}/clusters/tkgi/${requestId}/backend.tf")
+                        sh("aws s3 cp terraform.tfvars s3://${operator_manifest.terraform.buckets.vars.name}/clusters/tkgi/${requestToken}/terraform.tfvars")
+                        sh("aws s3 cp backend.tf s3://${operator_manifest.terraform.buckets.secrets.name}/clusters/tkgi/${requestToken}/backend.tf")
 
                         // trigger downstream job
                         build job: "${env.DOWNSTREAM_JOB}", parameters: [
-                            string(name: 'USER_REQUEST_BUILD_TAG', value: "${requestId}"),
+                            string(name: 'REQUEST_TOKEN', value: "${requestToken}"),
                             string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', value: "${env.READWRITE_BUCKET_CREDENTIALS_ID}"),
                             string(name: 'SECRETS_BUCKET', value: "s3://${operator_manifest.terraform.buckets.secrets.name}"),
                             string(name: 'VARS_BUCKET', value: "s3://${operator_manifest.terraform.buckets.vars.name}")
