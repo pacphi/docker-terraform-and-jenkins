@@ -39,7 +39,7 @@ pipeline {
             }
             steps {
                 // this service account has only permissions to read from cloud storage buckets
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${env.READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     dir("${env.MODULE_ROOT}") {
                         sh('aws --version')
                         sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
@@ -90,7 +90,7 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${env.READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     dir("${env.MODULE_ROOT}") {
                         sh('aws --version')
                         sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')

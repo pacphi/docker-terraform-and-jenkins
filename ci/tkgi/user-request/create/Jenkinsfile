@@ -81,7 +81,7 @@ pipeline {
                          git branch: "${env.USER_MANIFEST_GIT_REPO_BRANCH}", url: "${env.USER_MANIFEST_GIT_REPO_URL}"
                     }
                     
-                    def requestToken = readFile(file: '.operator/uuid.txt')
+                    def requestToken = readFile(file: '.operator/uuid.txt').trim()
                     def user_manifest_folder = "${env.USER_MANIFEST_FOLDER}" == "" ? "${env.WORKSPACE}/.user" : "${env.WORKSPACE}/.user/${env.USER_MANIFEST_FOLDER}"
                     def operator_manifest_folder = "${env.WORKSPACE}/.operator"
                     def user_manifest = readYaml file: "${user_manifest_folder}/${env.USER_MANIFEST_FILENAME}"
@@ -93,11 +93,11 @@ pipeline {
 
                         def tfvars = "tkgi_api_url = \"${operator_manifest.cluster.api.url}\"\n"
                         tfvars += "tkgi_skip_ssl_validation = ${operator_manifest.cluster.api.skip_ssl_validation}\n"
-                        tfvars += "tkgi_user = ${operator_manifest.cluster.api.username}\n"
+                        tfvars += "tkgi_user = \"${operator_manifest.cluster.api.username}\"\n"
                         tfvars += "tkgi_password = \"${operator_manifest.cluster.api.password}\"\n"
                         tfvars += "tkgi_cluster_name = \"${user_manifest.cluster.name}\"\n"
-                        tfvars += "tkgi_plan = ${user_manifest.cluster.plan}\n"
-                        tfvars += "tkgi_worker_count = \"${user_manifest.cluster.nodes.worker.count}\"\n"
+                        tfvars += "tkgi_plan = \"${user_manifest.cluster.plan}\"\n"
+                        tfvars += "tkgi_worker_count = ${user_manifest.cluster.nodes.worker.count}\n"
                         tfvars += "tkgi_external_hostname = \"${user_manifest.cluster.hostname}\"\n"
                         tfvars += "tkgi_tags = \"${user_manifest.cluster.tags}\"\n"
                         tfvars += "\n"
