@@ -1,0 +1,69 @@
+pipeline {
+    // @see https://www.jenkins.io/doc/book/pipeline/syntax/#agent-parameters
+    agent any
+
+    environment {
+        MODULE_FOLDER = "sample/source-from-private-repo"
+        MODULE_ROOT = "terraform/$MODULE_FOLDER"
+        GIT_CREDENTIALS_ID = "git-personal-access-token"
+    }
+
+    stages {
+
+        stage("clone source") {
+            steps {
+                cleanWs()
+                // TODO consider replacing with [checkout scm] as described here: https://support.cloudbees.com/hc/en-us/articles/226122247-How-to-Customize-Checkout-for-Pipeline-Multibranch-
+                git branch: "main", url: "https://github.com/pacphi/docker-terraform-and-jenkins.git"
+            }
+        }
+
+        stage("invoke terraform") {
+            agent {
+                // @see https://stackoverflow.com/questions/55930244/jenkinsfile-to-run-terraform
+                // @see https://stackoverflow.com/questions/44206339/jenkins-declarative-pipeline-docker-registry if you would like to adapt the params below to source container image from private registry
+                docker {
+                    image 'hashicorp/terraform:light'
+                    args  '--rm -e HOME=/tmp --entrypoint='
+                    reuseNode true
+                }
+            }
+            steps {
+                script{
+                    withCredentials([usernamePassword(credentialsId: 'git-personal-access-token', passwordVariable: 'GH_TOKEN', usernameVariable: 'GH_USER')]) {
+                        def credHelper = "#!/usr/bin/env bash\n"
+                        credHelper += 'echo username=${GH_USER}\n'
+                        credHelper += 'echo password=${GH_TOKEN}\n'
+                        sh("echo -e ${credHelper} > $HOME/credentials.sh")
+                        sh("chmod +x $HOME/credentials.sh")
+                        sh("git config --global credential.helper $HOME/credentials.sh")
+                        dir("${env.MODULE_ROOT}") {
+                            sh('terraform init')
+                            sh('terraform plan -out terraform.plan')
+                            sh('terraform apply -auto-approve terraform.plan')
+                            sh('terraform output kubeconfig_contents > config')
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        // Always runs. And it runs before any of the other post conditions.
+        always {
+            // Wipe out the workspace before we finish!
+            deleteDir()
+        }
+    }
+    
+    // The options directive is for configuration that applies to the whole job.
+    options {
+        // Make sure we only keep 10 builds at a time, so we don't fill up our storage!
+        buildDiscarder(logRotator(numToKeepStr:'10'))
+        
+        // And we'd really like to be sure that this build doesn't hang forever, so
+        // let's time it out after 30 minutes.
+        timeout(time: 30, unit: 'MINUTES')
+    }
+}
