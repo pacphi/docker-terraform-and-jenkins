@@ -5,7 +5,7 @@ ARG api_token
 ENV TERRAFORM_VERSION=0.14.7 \
     TKGI_VERSION=1.10.0 \
     TKGI_PRODUCT_FILE_ID=875614 \
-    PIVNET_VERSION=2.0.2 \
+    PIVNET_VERSION=3.0.1 \
     TANZU_NETWORK_API_TOKEN=$api_token
 
 RUN apk add --no-cache bash bc coreutils gawk git grep sed unzip wget && \
