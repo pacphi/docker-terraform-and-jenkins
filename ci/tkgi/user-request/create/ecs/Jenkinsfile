@@ -1,0 +1,132 @@
+pipeline {
+    // @see https://www.jenkins.io/doc/book/pipeline/syntax/#agent-parameters
+    agent {
+        label 'ecs'
+    }
+
+    environment {
+        DEFAULT_AWS_REGION = 'us-west-2'
+        DOWNSTREAM_JOB = 'create-tkgi-cluster'
+        READWRITE_BUCKET_CREDENTIALS_ID = 's3-fullaccess'
+        TERRAFORM_MODULES_GIT_REPO_URL = 'https://github.com/pacphi/docker-terraform-and-jenkins.git'
+        TERRAFORM_MODULES_GIT_REPO_BRANCH = 'main'
+        OPERATOR_MANIFEST_S3_BUCKET = 'terraform-secrets-076f328'
+        OPERATOR_MANIFEST_FILENAME = 'tkgi-cr.v1.yaml'
+    }
+
+    parameters {
+        string(name: 'USER_MANIFEST_GIT_REPO_URL', description: 'A Git repository URL')
+        string(name: 'USER_MANIFEST_GIT_REPO_BRANCH', description: 'A Git repository branch')
+        string(name: 'USER_MANIFEST_FOLDER', defaultValue: '', description: 'The relative path from the root of the repository from which to source the manifest file')
+        choice(name: 'USER_MANIFEST_FILENAME', choices: ['tkgi-cr.v1.yaml'], description: 'The filename and version of the manifest')
+        choice(name: 'TARGET_ENVIRONMENT', choices: ['test', 'staging'], description: 'Select a target environment')
+    }
+
+    stages {
+
+        stage("clone terraform modules repo") {
+            steps {
+                cleanWs()
+                git branch: "${env.TERRAFORM_MODULES_GIT_REPO_BRANCH}", url: "${env.TERRAFORM_MODULES_GIT_REPO_URL}"
+            }
+        }
+
+        stage("create request token") {
+            steps {
+                script {
+                    sh('mkdir .operator')
+                    dir('.operator') {
+                        sh('uuidgen > uuid.txt')
+                    }
+                }
+            }
+        }
+
+        stage("manufacture configuration and trigger downstream job") {
+            steps {
+                // @see https://www.jenkins.io/doc/pipeline/steps/pipeline-utility-steps/ < this plugin must be installed
+                script {
+                    sh('mkdir .user')
+
+                    dir('.operator') {
+                        
+                        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                            sh('aws --version')
+                            sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
+                            sh('aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
+                            sh("aws configure set default.region ${env.DEFAULT_AWS_REGION}")
+                            sh("aws s3 cp s3://${env.OPERATOR_MANIFEST_S3_BUCKET}/${env.TARGET_ENVIRONMENT}/${env.OPERATOR_MANIFEST_FILENAME} .")
+                        }
+                    }
+
+                    dir('.user') {
+                         git branch: "${env.USER_MANIFEST_GIT_REPO_BRANCH}", url: "${env.USER_MANIFEST_GIT_REPO_URL}"
+                    }
+                    
+                    def requestToken = readFile(file: '.operator/uuid.txt').trim()
+                    def user_manifest_folder = "${env.USER_MANIFEST_FOLDER}" == "" ? "${env.WORKSPACE}/.user" : "${env.WORKSPACE}/.user/${env.USER_MANIFEST_FOLDER}"
+                    def operator_manifest_folder = "${env.WORKSPACE}/.operator"
+                    def user_manifest = readYaml file: "${user_manifest_folder}/${env.USER_MANIFEST_FILENAME}"
+                    def operator_manifest = readYaml file: "${operator_manifest_folder}/${env.OPERATOR_MANIFEST_FILENAME}"
+
+                    // cluster module configuration
+                    dir("terraform/clusters/tkgi") {  
+                        // user-supplied and operator-supplied key-values (i.e., terraform.tfvars) and backend configuration (i.e., backend.tf) for managing terraform.tfstate
+
+                        def tfvars = "tkgi_api_url = \"${operator_manifest.cluster.api.url}\"\n"
+                        tfvars += "tkgi_skip_ssl_validation = ${operator_manifest.cluster.api.skip_ssl_validation}\n"
+                        tfvars += "tkgi_user = \"${operator_manifest.cluster.api.username}\"\n"
+                        tfvars += "tkgi_password = \"${operator_manifest.cluster.api.password}\"\n"
+                        tfvars += "tkgi_cluster_name = \"${user_manifest.cluster.name}\"\n"
+                        tfvars += "tkgi_plan = \"${user_manifest.cluster.plan}\"\n"
+                        tfvars += "tkgi_worker_count = ${user_manifest.cluster.nodes.worker.count}\n"
+                        tfvars += "tkgi_external_hostname = \"${user_manifest.cluster.hostname}\"\n"
+                        tfvars += "tkgi_tags = \"${user_manifest.cluster.tags}\"\n"
+                        tfvars += "\n"
+
+                        def backend = "terraform {\n"
+                        backend += "\tbackend \"${operator_manifest.terraform.backend.type}\" {\n"
+                        backend += "\t\tbucket = \"${operator_manifest.terraform.backend.bucket}\"\n"
+                        backend += "\t\tregion = \"${operator_manifest.terraform.backend.region}\"\n"
+                        backend += "\t\tkey = \"clusters/tkgi/${requestToken}\"\n"
+                        backend += "\t}\n"
+                        backend += "}"
+
+                        writeFile(file: 'terraform.tfvars', text: tfvars)
+                        writeFile(file: 'backend.tf', text: backend)
+
+                        // upload configuration to respective cloud storage buckets
+                        sh("aws s3 cp terraform.tfvars s3://${operator_manifest.terraform.buckets.vars.name}/clusters/tkgi/${requestToken}/terraform.tfvars")
+                        sh("aws s3 cp backend.tf s3://${operator_manifest.terraform.buckets.secrets.name}/clusters/tkgi/${requestToken}/backend.tf")
+
+                        // trigger downstream job
+                        build job: "${env.DOWNSTREAM_JOB}", parameters: [
+                            string(name: 'REQUEST_TOKEN', value: "${requestToken}"),
+                            string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', value: "${env.READWRITE_BUCKET_CREDENTIALS_ID}"),
+                            string(name: 'SECRETS_BUCKET', value: "s3://${operator_manifest.terraform.buckets.secrets.name}"),
+                            string(name: 'VARS_BUCKET', value: "s3://${operator_manifest.terraform.buckets.vars.name}")
+                        ]
+                    }
+                }
+            }
+        } 
+    }
+
+    post {
+        // Always runs. And it runs before any of the other post conditions.
+        always {
+            // Wipe out the workspace before we finish!
+            deleteDir()
+        }
+    }
+        
+    // The options directive is for configuration that applies to the whole job.
+    options {
+        // Make sure we only keep 10 builds at a time, so we don't fill up our storage!
+        buildDiscarder(logRotator(numToKeepStr:'10'))
+            
+        // And we'd really like to be sure that this build doesn't hang forever, so
+        // let's time it out after 10 minutes.
+        timeout(time: 10, unit: 'MINUTES')
+    }
+}

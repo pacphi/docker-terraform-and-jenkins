@@ -1,0 +1,70 @@
+pipeline {
+    // @see https://www.jenkins.io/doc/book/pipeline/syntax/#agent-parameters
+    agent {
+        label 'ecs'
+    }
+
+    environment {
+        DEFAULT_AWS_REGION = 'us-west-2'
+        DOWNSTREAM_JOB = "destroy-tkgi-cluster"
+        READWRITE_BUCKET_CREDENTIALS_ID = "s3-fullaccess"
+        OPERATOR_MANIFEST_S3_BUCKET = 'terraform-secrets-076f328'
+        OPERATOR_MANIFEST_FILENAME = 'tkgi-cr.v1.yaml'
+    }
+
+    parameters {
+        string(name: 'REQUEST_TOKEN', description: 'Originating create-user-request pipeline job id')
+        choice(name: 'TARGET_ENVIRONMENT', choices: ['test', 'staging'], description: 'Select a target environment')
+    }
+
+    stages {
+
+        stage("fetch configuration and trigger downstream job") {
+            steps {
+                // @see https://www.jenkins.io/doc/pipeline/steps/pipeline-utility-steps/ < this plugin must be installed
+                script {
+                    sh('mkdir .operator')
+
+                    dir('.operator') {
+                        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: "${READWRITE_BUCKET_CREDENTIALS_ID}", secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                            sh('aws --version')
+                            sh('aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}')
+                            sh('aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}')
+                            sh("aws configure set default.region ${env.DEFAULT_AWS_REGION}")
+                            sh("aws s3 cp s3://${env.OPERATOR_MANIFEST_S3_BUCKET}/${env.TARGET_ENVIRONMENT}/${env.OPERATOR_MANIFEST_FILENAME} .")
+                        }
+                    }
+                    
+                    def operator_manifest_folder = "${env.WORKSPACE}/.operator"
+                    def operator_manifest = readYaml file: "${operator_manifest_folder}/${env.OPERATOR_MANIFEST_FILENAME}"
+
+                    // trigger downstream job
+                    build job: "${env.DOWNSTREAM_JOB}", parameters: [
+                        string(name: 'REQUEST_TOKEN', value: "${env.REQUEST_TOKEN}"),
+                        string(name: 'READWRITE_BUCKET_CREDENTIALS_ID', value: "${env.READWRITE_BUCKET_CREDENTIALS_ID}"),
+                        string(name: 'SECRETS_BUCKET', value: "s3://${operator_manifest.terraform.buckets.secrets.name}"),
+                        string(name: 'VARS_BUCKET', value: "s3://${operator_manifest.terraform.buckets.vars.name}")
+                    ]
+                }
+            }
+        } 
+    }
+
+    post {
+        // Always runs. And it runs before any of the other post conditions.
+        always {
+            // Wipe out the workspace before we finish!
+            deleteDir()
+        }
+    }
+        
+    // The options directive is for configuration that applies to the whole job.
+    options {
+        // Make sure we only keep 10 builds at a time, so we don't fill up our storage!
+        buildDiscarder(logRotator(numToKeepStr:'10'))
+            
+        // And we'd really like to be sure that this build doesn't hang forever, so
+        // let's time it out after 10 minutes.
+        timeout(time: 10, unit: 'MINUTES')
+    }
+}
