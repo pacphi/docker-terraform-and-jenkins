@@ -15,3 +15,9 @@ docker build -t {prefix}/{image-name} .
 ```bash
 docker pull pacphi/uuidgen
 ```
+
+### How to run locally
+
+```bash
+docker run -it --rm pacphi/uuidgen /bin/sh
+```

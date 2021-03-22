@@ -16,3 +16,9 @@ docker build --build-arg api_token={tanzu-network-api-token} -t {prefix}/{image-
 ```bash
 docker pull pacphi/terraforming-tkgi
 ```
+
+### How to run locally
+
+```bash
+docker run -it --rm pacphi/terraforming-tkgi /bin/sh
+```
