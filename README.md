@@ -121,7 +121,7 @@ rm -Rf .terraform/ .terraform.lock.hcl terraform.log terraform.plan terraform.tf
 
 ## Jenkins pipeline workflow
 
-Once you have authored and smoke-tested a module you'll want to invoke it from a Jenkins pipeline job.  Each module consumes variables and stores state in a backend provider.  Variables may contain sensitive configuration, and in some instances, configuration is owned or defined by different parties.  Therefore, it make sense to divide configuration supplied by a *user* and an *operator*.  Users will author and maintain configuration in a Git repository.  Operators will author and maintain sensitive configuration in either Artifactory or a version-managed, encrypted cloud storage bucket.
+Once you have authored and smoke-tested a module you'll want to invoke it from a Jenkins pipeline job.  Each module consumes variables and stores state in a backend provider.  Variables may contain sensitive configuration, and in some instances, configuration is owned or defined by different parties.  Therefore, it makes sense to divide configuration supplied by a *user* and an *operator*.  Users will author and maintain configuration in a Git repository.  Operators will author and maintain sensitive configuration in either Artifactory or a version-managed, encrypted cloud storage bucket.
 
 For examples of *user-supplied* configuration visit the [user](https://github.com/pacphi/docker-terraform-and-jenkins/tree/user) branch of this Git repository.
 
@@ -213,4 +213,4 @@ You might choose to organize related pipelines into a view.
 
 ## Additional reading
 
-* [Running Jenkins jobs in AWS ECS with salve agents](https://tomgregory.com/jenkins-jobs-in-aws-ecs-with-slave-agents/)
+* [Running Jenkins jobs in AWS ECS with slave agents](https://tomgregory.com/jenkins-jobs-in-aws-ecs-with-slave-agents/)
