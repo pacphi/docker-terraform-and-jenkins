@@ -1,9 +1,9 @@
 cluster:
-  name: "dev"
+  name: "zoolabs"
   plan: "small"
-  hostname: "dev.pks.hamster.zoolabs.me"
+  hostname: "zoolabs.haas-448.pez.vmware.com"
   nodes:
     worker:
-      count: 3
+      count: 5
   # https://docs.pivotal.io/tkgi/1-8/tag-clusters.html#tagging-cli-existing
   tags: "status:non-billable,region:northwest"
