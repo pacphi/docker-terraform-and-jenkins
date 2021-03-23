@@ -1,5 +1,5 @@
 module "tkgi_cluster" {
-  source = "git::https://github.com/pacphi/terraforming-tkgi.git//modules/cluster/tkgi"
+  source = "git::https://github.com/warroyo/terraforming-tkgi.git//modules/cluster/tkgi"
 
     tkgi_api_url = var.tkgi_api_url
     tkgi_skip_ssl_validation = var.tkgi_skip_ssl_validation
