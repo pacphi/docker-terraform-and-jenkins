@@ -147,6 +147,10 @@ terraform:
       name: "terraform-secrets-21665ca"
 ```
 
+As you implement and onboard additional modules that will participate in an overall pipeline chain, some thought and care should be placed on where configuration is defined and who is responsible for maintaining it.  Is it the *user* or the *operator*?
+
+*User-initiated* pipeline definitions (e.g., see [ci/tkgi/user-request/create/Jenkinsfile](https://github.com/pacphi/docker-terraform-and-jenkins/blob/main/ci/tkgi/user-request/create/ecs/Jenkinsfile) and [ci/tkgi/user-request/destroy](https://github.com/pacphi/docker-terraform-and-jenkins/blob/main/ci/tkgi/user-request/destroy/ecs/Jenkinsfile)) are the places where both the *user* and *operator* configuration are consumed.  What happens when you execute the job?  Well, the configuration is merged and two (or more) files are manufactured: `terraform.tfvars` and `backend.tf`.  A `terraform.tfvars` file is manufactured for each downstream module.  We're basically seeding configuration for downstream pipeline jobs to consume.
+
 ### Upload operator manifest
 
 **on AWS**
@@ -199,7 +203,7 @@ Click on *New Item*.
 *Enter an item name* then select *Pipeline* and click the *OK* button.
 
 Scroll down to the *Pipeline* section.  Under the *Definition* sub-section make sure that *Pipeline script* is selected from the drop-down selector, then 
-copy-and-paste the contents of a *Jenkinsfile* into the *Script* block.  Click the *Save* button to complete uploading the *Jenkinsfle*.
+copy-and-paste the contents of a *Jenkinsfile* into the *Script* block.  Click the *Save* button to complete uploading the *Jenkinsfile*.
 
 You might choose to organize related pipelines into a view.
 
