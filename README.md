@@ -194,4 +194,19 @@ For inspiration have a look in the [ci/gke](ci/gke) and [ci/tkgi](ci/tkgi) direc
 
 Login to the Jenkins instance via your favorite browser.
 
-// TODO
+Click on *New Item*.
+
+*Enter an item name* then select *Pipeline* and click the *OK* button.
+
+Scroll down to the *Pipeline* section.  Under the *Definition* sub-section make sure that *Pipeline script* is selected from the drop-down selector, then 
+copy-and-paste the contents of a *Jenkinsfile* into the *Script* block.  Click the *Save* button to complete uploading the *Jenkinsfle*.
+
+You might choose to organize related pipelines into a view.
+
+![Screenshot of Jenkins view](jenkins-view.png)
+
+> The collection of `-v2` suffixed pipelines you see in the screenshot above are based upon the `Jenkinsfile` pipelines found in the `ecs` sub-directories underneath the `ci/tkgi` sub-directory tree.
+
+## Additional reading
+
+* [Running Jenkins jobs in AWS ECS with salve agents](https://tomgregory.com/jenkins-jobs-in-aws-ecs-with-slave-agents/)
