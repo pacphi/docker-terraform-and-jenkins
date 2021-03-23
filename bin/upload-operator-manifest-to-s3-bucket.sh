@@ -12,4 +12,4 @@ MANIFEST_FILENAME="$4"
 
 cd "${PATH_TO_MANIFEST}" || exit 
 aws s3 cp ${MANIFEST_FILENAME} s3://${BUCKET_NAME}/${ENVIRONMENT}/${MANIFEST_FILENAME}
-aws s3api put-object --bucket ${BUCKET_NAME} --key ${ENVIRONMENT}/${MANIFEST_FILENAME} --server-side-encryption AES256
+aws s3api put-object --bucket ${BUCKET_NAME} --key ${ENVIRONMENT}/${MANIFEST_FILENAME} --server-side-encryption AES256 --output yaml --no-cli-pager
