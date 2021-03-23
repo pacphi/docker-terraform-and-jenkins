@@ -6,11 +6,11 @@ pipeline {
 
     environment {
         DEFAULT_AWS_REGION = 'us-west-2'
-        DOWNSTREAM_JOB = 'create-tkgi-cluster'
+        DOWNSTREAM_JOB = 'create-tkgi-cluster-v2'
         READWRITE_BUCKET_CREDENTIALS_ID = 's3-fullaccess'
         TERRAFORM_MODULES_GIT_REPO_URL = 'https://github.com/pacphi/docker-terraform-and-jenkins.git'
         TERRAFORM_MODULES_GIT_REPO_BRANCH = 'main'
-        OPERATOR_MANIFEST_S3_BUCKET = 'terraform-secrets-076f328'
+        OPERATOR_MANIFEST_S3_BUCKET = 'terraform-secrets-21665ca'
         OPERATOR_MANIFEST_FILENAME = 'tkgi-cr.v1.yaml'
     }
 
@@ -19,7 +19,7 @@ pipeline {
         string(name: 'USER_MANIFEST_GIT_REPO_BRANCH', description: 'A Git repository branch')
         string(name: 'USER_MANIFEST_FOLDER', defaultValue: '', description: 'The relative path from the root of the repository from which to source the manifest file')
         choice(name: 'USER_MANIFEST_FILENAME', choices: ['tkgi-cr.v1.yaml'], description: 'The filename and version of the manifest')
-        choice(name: 'TARGET_ENVIRONMENT', choices: ['test', 'staging'], description: 'Select a target environment')
+        choice(name: 'TARGET_ENVIRONMENT', choices: ['dev'], description: 'Select a target environment')
     }
 
     stages {

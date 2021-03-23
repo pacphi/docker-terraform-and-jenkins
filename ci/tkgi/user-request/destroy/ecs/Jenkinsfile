@@ -6,15 +6,15 @@ pipeline {
 
     environment {
         DEFAULT_AWS_REGION = 'us-west-2'
-        DOWNSTREAM_JOB = "destroy-tkgi-cluster"
+        DOWNSTREAM_JOB = "destroy-tkgi-cluster-v2"
         READWRITE_BUCKET_CREDENTIALS_ID = "s3-fullaccess"
-        OPERATOR_MANIFEST_S3_BUCKET = 'terraform-secrets-076f328'
+        OPERATOR_MANIFEST_S3_BUCKET = 'terraform-secrets-21665ca'
         OPERATOR_MANIFEST_FILENAME = 'tkgi-cr.v1.yaml'
     }
 
     parameters {
         string(name: 'REQUEST_TOKEN', description: 'Originating create-user-request pipeline job id')
-        choice(name: 'TARGET_ENVIRONMENT', choices: ['test', 'staging'], description: 'Select a target environment')
+        choice(name: 'TARGET_ENVIRONMENT', choices: ['dev'], description: 'Select a target environment')
     }
 
     stages {
