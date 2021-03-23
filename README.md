@@ -67,7 +67,7 @@ Fun with Docker, Terraform, Jenkins and Artifactory.
 
 ## Setup
 
-We'll be managing Terraform *variables* and *secrets* in version-managed and encrypted cloud storage.  Terraform *state* will be managed in one of two ways, either within Artifactory or cloud storage.  For GCP we target Artifactory, while for AWS we target S3.
+We'll be managing Terraform *variables* and *secrets* in version-managed and encrypted cloud storage.  Terraform *state* will be managed in one of two ways, either within Artifactory or cloud storage.  For GCP we target Artifactory, while for AWS we target S3. (Terraform supports a number of [backends](https://www.terraform.io/docs/language/settings/backends/index.html) for state management).
 
 ### Initialize buckets
 
