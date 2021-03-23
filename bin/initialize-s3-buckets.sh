@@ -24,3 +24,8 @@ aws s3api put-bucket-encryption \
     --bucket terraform-secrets-${SUFFIX} \
     --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}' \
     --output yaml --no-cli-pager
+
+aws s3api put-bucket-encryption \
+    --bucket terraform-state-${SUFFIX} \
+    --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}' \
+    --output yaml --no-cli-pager
