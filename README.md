@@ -5,14 +5,16 @@ Fun with Docker, Terraform, Jenkins and Artifactory.
 ![Screenshot of create-gke-cluster pipeline](create-gke-cluster.png)
 ## Prerequisites
 
+* AWS
+  * [IAM Account](https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html)
+  * Permissions to create [S3 buckets](https://docs.aws.amazon.com/AmazonS3/latest/userguide/creating-bucket.html)
+
 * Google Cloud
   * [Service Account](https://cloud.google.com/iam/docs/creating-managing-service-accounts)
   * 2x [VMs](https://cloud.google.com/compute/docs/quickstart-linux)
     * 1 VM with Jenkins and Docker
     * 1 VM with Artifactory
-  * 2x [Storage buckets](https://cloud.google.com/storage/docs/creating-buckets)
-    * 1 should be named `terraform-state` and be configured to vend items only to authorized accounts
-    * 1 should be named `sa-credentials` and be configured to vend items only to authorized accounts
+  * Permissions to create [Storage buckets](https://cloud.google.com/storage/docs/creating-buckets)
 
 * Jenkins
   * [Installation](https://www.cloudbooklet.com/how-to-install-jenkins-on-ubuntu-20-04-with-nginx-and-ssl/)
