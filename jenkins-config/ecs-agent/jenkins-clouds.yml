@@ -1,0 +1,25 @@
+clouds:
+  - ecs:
+      allowedOverrides: "label,image,inheritfrom"
+      cluster: <cluster-arn>
+      credentialsId: <credential-id>
+      jenkinsUrl: <jenkinsur>
+      name: "jenkins-ecs-cloud"
+      regionName: "us-west-2"
+      templates:
+      - assignPublicIp: true
+        cpu: 1024
+        image: "jenkins/inbound-agent:alpine"
+        label: "ecs"
+        launchType: "FARGATE"
+        memory: 0
+        memoryReservation: 2048
+        networkMode: "default"
+        platformVersion: "LATEST"
+        privileged: false
+        remoteFSRoot: "/home/jenkins"
+        securityGroups: <sg id from cloudformation>
+        sharedMemorySize: 0
+        subnets: <2 public subnet ids>
+        templateName: "jenkins-agent"
+        uniqueRemoteFSRoot: false

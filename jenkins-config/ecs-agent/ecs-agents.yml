@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Provision required resources on ECS to connect up an existing jenkins server
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: jenkins-worker-cluster
+  JenkinsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: jenkins-execution-role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+  JenkinsUser:
+    Type: AWS::IAM::User
+    Properties: 
+      Groups: 
+        - jenkins-ecs-group
+      Path: /
+      UserName: jenkins-ecs
+  JenkinsAgentSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: JenkinsAgentSecurityGroup
+      GroupDescription: Security group for Jenkins agents
+  Jenkinsecsgroup:
+    Type: AWS::IAM::Group
+    Properties: 
+      GroupName: jenkins-ecs-group
+      Path: /
+      Policies: 
+        - PolicyName: create-jenkins-agents
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action:
+                  - ecs:RegisterTaskDefinition
+                  - ecs:ListClusters
+                  - ecs:DescribeContainerInstances
+                  - ecs:ListTaskDefinitions
+                  - ecs:DescribeTaskDefinition
+                  - ecs:DeregisterTaskDefinition
+                Effect: Allow
+                Resource: '*'
+              - Action:
+                  - ecs:ListContainerInstances
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ECSCluster}
+              - Action:
+                  - ecs:RunTask
+                Effect: Allow
+                Condition:
+                  ArnEquals:
+                    ecs:cluster:
+                      - !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ECSCluster}
+                Resource: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/*
+              - Action:
+                  - ecs:StopTask
+                Effect: Allow
+                Condition:
+                  ArnEquals:
+                    ecs:cluster:
+                      - !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ECSCluster}
+                Resource: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task/*
+              - Action:
+                  - ecs:DescribeTasks
+                Effect: Allow
+                Condition:
+                  ArnEquals:
+                    ecs:cluster:
+                      - !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ECSCluster}
+                Resource: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task/*
+              - Action:
+                  - iam:GetRole
+                  - iam:PassRole
+                Effect: Allow
+                Resource: !GetAtt JenkinsExecutionRole.Arn
+  JenkinsUserKey:
+    Type: AWS::IAM::AccessKey
+    Properties: 
+      UserName: jenkins-ecs
+    DependsOn:
+      - JenkinsUser
+Outputs:
+  usersecret:
+    Value: !GetAtt JenkinsUserKey.SecretAccessKey
+  userkey:
+    Value: !Ref JenkinsUserKey
+  securityGroup:
+    Value: !GetAtt JenkinsAgentSecurityGroup.GroupId
